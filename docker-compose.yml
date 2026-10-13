@@ -13,6 +13,7 @@ services:
       - PORT=3000
     volumes:
       - ./data:/app/data
+      - ./client/public:/app/client/public
     deploy:
       resources:
         limits:
@@ -36,12 +37,3 @@ services:
       resources:
         limits:
           memory: 100M
-
-  # Optional Cloudflare Tunnel for 100% hidden residential home IP
-  # cloudflared:
-  #   image: cloudflare/cloudflared:latest
-  #   container_name: bantay_pera_tunnel
-  #   restart: unless-stopped
-  #   command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
-  #   depends_on:
-  #     - caddy

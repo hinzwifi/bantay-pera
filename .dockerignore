@@ -1,0 +1,5 @@
+server/node_modules
+.git
+.gemini
+data/caddy_data
+data/caddy_config
