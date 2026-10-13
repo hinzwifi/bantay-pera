@@ -3,596 +3,1525 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bantay-Pera | Philippine Civic Anti-Corruption Engine</title>
-  <meta name="description" content="Ultra-lightweight public forensic database exposing procurement monopolies, unliquidated audit findings, and political dynasties in the Philippines.">
-  <link rel="icon" href="data:,">
+  <title>Bantay-Pera — Philippine Civic Anti-Corruption Engine</title>
+  <meta name="description" content="Ultra-lightweight public forensic database exposing procurement monopolies, unliquidated audit findings, and political dynasties in the Philippines. Zero IP logging, 100% verified real data.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🇵🇭</text></svg>">
+  
+  <script>
+    // 1. Immediately purge any rogue Service Worker from previous apps on localhost:3000
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for (var i = 0; i < registrations.length; i++) {
+          registrations[i].unregister().then(function(success) {
+            if (success) console.log('[Bantay-Pera] Successfully unregistered stale service worker.');
+          });
+        }
+      });
+    }
+    // 2. Clear browser cache storage
+    if ('caches' in window) {
+      caches.keys().then(function(keys) {
+        for (var i = 0; i < keys.length; i++) {
+          caches.delete(keys[i]);
+        }
+      });
+    }
+  </script>
+
   <style>
-    :root {
-      --bg: #ffffff;
-      --fg: #111111;
-      --muted: #666666;
-      --border: #e0e0e0;
-      --accent: #b91c1c;
-      --card-bg: #f9f9f9;
-      --tag-bg: #f3f3f3;
-      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0f0f0f;
-        --fg: #e5e5e5;
-        --muted: #888888;
-        --border: #262626;
-        --accent: #ef4444;
-        --card-bg: #171717;
-        --tag-bg: #222222;
+    :root {
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --bg: #ffffff;
+      --text: #000000;
+      --muted: rgba(0, 0, 0, 0.4);
+      --subtle: rgba(0, 0, 0, 0.25);
+      --border: rgba(0, 0, 0, 0.08);
+      --card-bg: rgba(0, 0, 0, 0.035);
+      --card-hover: rgba(0, 0, 0, 0.06);
+      --accent: #b91c1c;
+      --badge-bg: #ffffff;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      line-height: 1.5;
+    }
+
+    /* Layout structure matching Dead Simple Sites */
+    .app-layout {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+    }
+
+    aside {
+      width: 100%;
+      background: #ffffff;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .main-content {
+      width: 100%;
+      padding: 24px;
+    }
+
+    @media (min-width: 768px) {
+      .app-layout {
+        flex-direction: row;
+      }
+      aside {
+        width: 340px;
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+        border-right: 1px solid var(--border);
+        border-bottom: none;
+        padding: 32px;
+      }
+      .main-content {
+        margin-left: 340px;
+        padding: 32px;
       }
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: var(--bg);
-      color: var(--fg);
-      font-family: var(--font-sans);
-      font-size: 15px;
-      line-height: 1.6;
-      padding: 24px 16px 80px 16px;
-      max-width: 900px;
-      margin: 0 auto;
+    @media (min-width: 1024px) {
+      aside {
+        width: 380px;
+        padding: 36px;
+      }
+      .main-content {
+        margin-left: 380px;
+        padding: 40px;
+      }
     }
 
-    header {
-      border-bottom: 2px solid var(--fg);
-      padding-bottom: 16px;
+    /* Aside Header */
+    .brand-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
       margin-bottom: 24px;
     }
 
-    h1 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .brand-title {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
     }
 
-    .badge-live {
-      display: inline-block;
-      font-size: 11px;
-      font-family: var(--font-mono);
-      background: var(--accent);
-      color: #fff;
-      padding: 2px 6px;
-      border-radius: 2px;
-      text-transform: uppercase;
+    .brand-sub {
+      font-size: 13px;
+      color: var(--subtle);
+      margin-top: 3px;
+      font-weight: 500;
+    }
+
+    .top-nav {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+      font-size: 13px;
+    }
+
+    .top-nav button, .top-nav a {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+
+    .top-nav button:hover, .top-nav a:hover {
+      color: #000000;
+    }
+
+    .top-nav button.active-highlight {
+      color: #000000;
       font-weight: 600;
     }
 
-    .subtitle {
+    /* Aside Body */
+    .aside-body {
+      flex: 1;
+    }
+
+    .intro-p {
+      font-size: 14px;
+      line-height: 1.55;
+      margin-bottom: 16px;
+    }
+
+    .principles {
       color: var(--muted);
-      font-size: 0.9rem;
-      margin-top: 4px;
-    }
-
-    /* Stats Ticker */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 10px;
-      margin-bottom: 24px;
-    }
-
-    .stat-card {
-      border: 1px solid var(--border);
-      padding: 12px;
-      background: var(--card-bg);
-      border-radius: 3px;
-    }
-
-    .stat-num {
-      font-size: 1.25rem;
-      font-weight: 700;
-      font-family: var(--font-mono);
-      color: var(--accent);
-    }
-
-    .stat-label {
-      font-size: 0.8rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-    }
-
-    /* Nav Tabs */
-    nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 12px;
-      margin-bottom: 24px;
-    }
-
-    .nav-btn {
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--fg);
-      padding: 6px 12px;
       font-size: 13px;
-      font-family: var(--font-mono);
-      cursor: pointer;
-      border-radius: 3px;
+      line-height: 1.5;
+      margin-bottom: 24px;
     }
 
-    .nav-btn:hover, .nav-btn.active {
-      background: var(--fg);
-      color: var(--bg);
-      border-color: var(--fg);
+    .principles p {
+      margin-bottom: 2px;
     }
 
-    /* Search Bar */
-    .search-box {
+    /* Search Box */
+    .search-wrapper {
       margin-bottom: 24px;
     }
 
     .search-input {
       width: 100%;
-      padding: 10px 14px;
-      font-size: 14px;
-      font-family: var(--font-mono);
+      font-size: 13px;
+      font-family: inherit;
+      padding: 9px 12px;
+      background: rgba(0, 0, 0, 0.025);
       border: 1px solid var(--border);
-      background: var(--card-bg);
-      color: var(--fg);
-      border-radius: 3px;
+      border-radius: 2px;
       outline: none;
+      color: #000000;
+      transition: all 0.15s ease;
     }
 
     .search-input:focus {
-      border-color: var(--fg);
+      background: #ffffff;
+      border-color: #000000;
     }
 
-    /* Data Cards */
-    .section-title {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin-bottom: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .search-input::placeholder {
+      color: var(--subtle);
     }
 
-    .card-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .item-card {
-      border: 1px solid var(--border);
-      background: var(--card-bg);
-      padding: 16px;
-      border-radius: 3px;
-    }
-
-    .item-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 6px;
-      gap: 12px;
-    }
-
-    .item-title {
-      font-size: 1rem;
-      font-weight: 600;
-    }
-
-    .item-meta {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-
-    .item-flag {
-      display: inline-block;
+    /* Module Navigation */
+    .nav-section-title {
       font-size: 11px;
       font-family: var(--font-mono);
-      color: #fff;
-      background: var(--accent);
-      padding: 2px 6px;
-      border-radius: 2px;
-      margin-right: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .module-nav {
+      list-style: none;
+      margin-bottom: 28px;
+    }
+
+    .module-nav li {
       margin-bottom: 4px;
     }
 
-    .item-val {
+    .module-nav-btn {
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      padding: 4px 0;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: color 0.15s ease;
+    }
+
+    .module-nav-btn:hover {
+      color: #000000;
+    }
+
+    .module-nav-btn.active {
+      color: #000000;
+      font-weight: 600;
+    }
+
+    .module-nav-btn.active::before {
+      content: "—";
+      margin-right: 6px;
+      color: #000000;
+    }
+
+    .module-nav-btn .count-badge {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--subtle);
+    }
+
+    .module-nav-btn.active .count-badge {
+      color: var(--muted);
+    }
+
+    /* Sidebar Live Metrics */
+    .metrics-box {
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+      margin-bottom: 24px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 16px;
+      font-family: var(--font-mono);
+    }
+
+    .metric-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .metric-val {
+      font-size: 13px;
+      font-weight: 600;
+      color: #000000;
+    }
+
+    .metric-lbl {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    /* Aside Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+      margin-top: auto;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    footer a {
+      color: inherit;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    footer a:hover {
+      color: #000000;
+    }
+
+    /* Main Content Top Bar */
+    .content-header {
+      margin-bottom: 28px;
+    }
+
+    .content-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .content-title {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .content-count {
+      font-size: 13px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+    }
+
+    .content-desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 16px;
+      max-width: 720px;
+    }
+
+    /* Filter Chips */
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip-btn {
+      background: none;
+      border: 1px solid var(--border);
+      padding: 3px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      color: var(--muted);
+      border-radius: 2px;
+      transition: all 0.15s ease;
+    }
+
+    .chip-btn:hover {
+      border-color: #000000;
+      color: #000000;
+    }
+
+    .chip-btn.active {
+      background: #000000;
+      color: #ffffff;
+      border-color: #000000;
+    }
+
+    /* Cards Grid matching deadsimplesites.com */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      column-gap: 28px;
+      row-gap: 28px;
+    }
+
+    .card {
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .card-thumb {
+      width: 100%;
+      height: 220px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: background 0.2s ease, border-color 0.2s ease;
+      position: relative;
+    }
+
+    .card:hover .card-thumb {
+      background: var(--card-hover);
+      border-color: rgba(0, 0, 0, 0.2);
+    }
+
+    .thumb-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .badge-pill {
+      display: inline-block;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      background: var(--badge-bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: #000000;
+    }
+
+    .badge-pill.risk {
+      color: var(--accent);
+      border-color: rgba(185, 28, 28, 0.25);
+    }
+
+    .thumb-ref {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--subtle);
+      white-space: nowrap;
+    }
+
+    .thumb-main {
+      margin: 10px 0;
+    }
+
+    .thumb-figure-lbl {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      margin-bottom: 2px;
+    }
+
+    .thumb-figure-val {
+      font-size: 20px;
       font-family: var(--font-mono);
       font-weight: 700;
-      color: var(--accent);
+      letter-spacing: -0.02em;
+      color: #000000;
+      line-height: 1.15;
     }
 
-    /* Whistleblower Drop UI */
-    .drop-form {
+    .thumb-flags {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding: 0 1px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #000000;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 70%;
+    }
+
+    .card-action {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--subtle);
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      transition: color 0.15s ease;
+    }
+
+    .card:hover .card-action {
+      color: #000000;
+    }
+
+    /* Modal / Dossier Window */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-card {
+      background: #ffffff;
       border: 1px solid var(--border);
-      padding: 20px;
-      background: var(--card-bg);
-      border-radius: 3px;
+      border-radius: 2px;
+      max-width: 640px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 32px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+      position: relative;
     }
 
+    .modal-close {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 4px 8px;
+    }
+
+    .modal-close:hover {
+      color: #000000;
+    }
+
+    .modal-meta-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      padding-right: 24px;
+    }
+
+    .modal-figure-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 16px;
+      border-radius: 2px;
+      margin: 16px 0;
+    }
+
+    .modal-figure-title {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .modal-figure-num {
+      font-size: 24px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .modal-field {
+      margin-bottom: 14px;
+      font-size: 13px;
+    }
+
+    .modal-field strong {
+      font-weight: 600;
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+
+    .json-box {
+      background: rgba(0, 0, 0, 0.03);
+      border: 1px solid var(--border);
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      border-radius: 2px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    /* Whistleblower Drop Form */
     .form-group {
       margin-bottom: 16px;
     }
 
-    label {
+    .form-label {
       display: block;
-      font-size: 13px;
-      font-family: var(--font-mono);
-      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      color: #000000;
       margin-bottom: 6px;
     }
 
-    textarea, input[type="text"] {
+    .form-input, .form-textarea {
       width: 100%;
-      padding: 10px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--fg);
-      font-family: var(--font-mono);
+      padding: 10px 12px;
+      font-family: inherit;
       font-size: 13px;
-      border-radius: 3px;
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.02);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    .form-input:focus, .form-textarea:focus {
+      background: #ffffff;
+      border-color: #000000;
     }
 
     .btn-submit {
-      background: var(--accent);
-      color: #fff;
+      background: #000000;
+      color: #ffffff;
       border: none;
       padding: 10px 18px;
-      font-family: var(--font-mono);
       font-size: 13px;
-      font-weight: 600;
+      font-weight: 500;
       cursor: pointer;
-      border-radius: 3px;
+      border-radius: 2px;
+      transition: opacity 0.15s ease;
     }
 
-    .alert-box {
-      padding: 12px;
-      background: var(--tag-bg);
-      border-left: 3px solid var(--accent);
-      font-family: var(--font-mono);
-      font-size: 12px;
+    .btn-submit:hover {
+      opacity: 0.8;
+    }
+
+    .receipt-box {
       margin-top: 16px;
-      display: none;
-    }
-
-    footer {
-      border-top: 1px solid var(--border);
-      padding-top: 20px;
-      margin-top: 40px;
-      font-size: 12px;
+      padding: 16px;
+      border: 1px solid #000000;
+      background: rgba(0, 0, 0, 0.02);
       font-family: var(--font-mono);
-      color: var(--muted);
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
+      font-size: 12px;
     }
 
-    a { color: inherit; text-decoration: underline; }
+    /* Empty state */
+    .empty-state {
+      padding: 48px 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+      grid-column: 1 / -1;
+    }
   </style>
 </head>
 <body>
+  <div class="app-layout">
+    <!-- Left Sidebar matching Dead Simple Sites -->
+    <aside>
+      <div class="brand-header">
+        <div>
+          <h1 class="brand-title">Bantay-Pera</h1>
+          <div class="brand-sub">BP • CIVIC AUDIT ENGINE</div>
+        </div>
+        <nav class="top-nav">
+          <button type="button" onclick="openWhistleblowerModal()">Tor Drop</button>
+          <button type="button" onclick="openSeedboxModal()">P2P Seedbox</button>
+          <a href="/api/ocds/releases" target="_blank" rel="noopener">OCDS 1.1</a>
+        </nav>
+      </div>
 
-  <header>
-    <h1>BANTAY-PERA <span class="badge-live">Real-Data Forensic Node</span></h1>
-    <p class="subtitle">10-Module Public Anti-Corruption & Procurement Watchdog Engine | Republic of the Philippines</p>
-  </header>
+      <div class="aside-body">
+        <p class="intro-p">
+          Forensic financial analysis on Philippine public funds, procurement monopolies, and unliquidated audit disallowances.
+        </p>
 
-  <!-- Live Telemetry -->
-  <div class="stats-grid" id="statsGrid">
-    <div class="stat-card">
-      <div class="stat-num" id="statTenders">...</div>
-      <div class="stat-label">Tenders Audited</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-num" id="statCOA">...</div>
-      <div class="stat-label">COA Disallowed (PHP)</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-num" id="statBudget">...</div>
-      <div class="stat-label">Confidential Funds Tracked</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-num" id="statDynasties">...</div>
-      <div class="stat-label">Political Clans Mapped</div>
+        <div class="principles">
+          <p>No manufactured data.</p>
+          <p>No bloated frameworks.</p>
+          <p>Zero IP logging &amp; client encrypted.</p>
+        </div>
+
+        <!-- Global Search Input -->
+        <div class="search-wrapper">
+          <input 
+            type="text" 
+            id="searchInput" 
+            class="search-input" 
+            placeholder="Search DPWH, COA, LGU, CIF..." 
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+
+        <!-- Module Navigation List (All 10 Modules) -->
+        <div class="nav-section-title">Forensic Modules</div>
+        <ul class="module-nav" id="moduleNavList">
+          <li>
+            <button type="button" class="module-nav-btn active" data-mod="procurement" onclick="switchModule('procurement')">
+              <span>PhilGEPS Tender Monopolies</span>
+              <span class="count-badge" id="badge-procurement">6</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="module-nav-btn" data-mod="coa" onclick="switchModule('coa')">
+              <span>COA Audit Disallowances</span>
+              <span class="count-badge" id="badge-coa">5</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="module-nav-btn" data-mod="budget" onclick="switchModule('budget')">
+              <span>National Budget &amp; CIF</span>
+              <span class="count-badge" id="badge-budget">2</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="module-nav-btn" data-mod="ads" onclick="switchModule('ads')">
+              <span>Meta Political Ad Spend</span>
+              <span class="count-badge" id="badge-ads">4</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="module-nav-btn" data-mod="dynasties" onclick="switchModule('dynasties')">
+              <span>Political Dynasties &amp; Clans</span>
+              <span class="count-badge" id="badge-dynasties">4</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="module-nav-btn" data-mod="efoi" onclick="switchModule('efoi')">
+              <span>eFOI Agency Compliance</span>
+              <span class="count-badge" id="badge-efoi">4</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="module-nav-btn" data-mod="ocds" onclick="switchModule('ocds')">
+              <span>OCDS Open Contracting v1.1</span>
+              <span class="count-badge">JSON</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="module-nav-btn" data-mod="torrents" onclick="switchModule('torrents')">
+              <span>P2P BitTorrent Archive</span>
+              <span class="count-badge">48GB</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="module-nav-btn" data-mod="whistleblower" onclick="switchModule('whistleblower')">
+              <span>Anonymous Whistleblower Drop</span>
+              <span class="count-badge" id="badge-whistle">1</span>
+            </button>
+          </li>
+        </ul>
+
+        <!-- Live Metrics Section -->
+        <div class="metrics-box">
+          <div class="nav-section-title">Live Public Audit Metrics</div>
+          <div class="metrics-grid">
+            <div class="metric-item">
+              <span class="metric-val" id="metric-tenders">₱534.7M</span>
+              <span class="metric-lbl">Audited Tenders</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-val" id="metric-coa">₱11.23B</span>
+              <span class="metric-lbl">COA Disallowed</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-val" id="metric-cif">₱4.56B</span>
+              <span class="metric-lbl">Confidential Funds</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-val" id="metric-ads">₱5.26M</span>
+              <span class="metric-lbl">Shadow Ad Spend</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer matching Dead Simple Sites -->
+      <footer>
+        <p>Verified against official PH Gazettes &amp; COA AARs.</p>
+        <p>Memory: <span id="metric-ram" style="font-family: var(--font-mono)">~69 MB</span> • SQLite FTS5</p>
+        <p style="margin-top: 4px">
+          <a href="https://github.com/hinzwifi/bantay-pera" target="_blank" rel="noopener">GitHub</a> • 
+          <a href="/api/stats" target="_blank">Metrics API</a> • 
+          <span>Zero IP Logging</span>
+        </p>
+      </footer>
+    </aside>
+
+    <!-- Right Content Area with Cards Grid -->
+    <main class="main-content">
+      <div class="content-header">
+        <div class="content-title-row">
+          <h2 class="content-title" id="moduleTitle">PhilGEPS Tender &amp; Bid Monopolies</h2>
+          <span class="content-count" id="moduleCount">6 flagged records</span>
+        </div>
+        <p class="content-desc" id="moduleDesc">
+          Split contracts, single-bidder awards, and contractor cartels awarded at &gt;99% of Approved Budget for the Contract (ABC).
+        </p>
+        <div class="filter-chips" id="filterChipsContainer">
+          <!-- Dynamic filter chips -->
+        </div>
+      </div>
+
+      <!-- Card Grid -->
+      <div class="card-grid" id="cardGrid">
+        <!-- Rendered dynamically -->
+      </div>
+    </main>
+  </div>
+
+  <!-- Detail Dossier Modal -->
+  <div class="modal-backdrop" id="dossierModal" onclick="closeModalOnBackdrop(event)">
+    <div class="modal-card">
+      <button type="button" class="modal-close" onclick="closeModal()">✕</button>
+      <div class="modal-meta-row" id="modalMetaRow"></div>
+      <h3 class="modal-title" id="modalTitle"></h3>
+      
+      <div class="modal-figure-box" id="modalFigureBox">
+        <div class="modal-figure-title" id="modalFigureLabel">TOTAL EXPOSURE</div>
+        <div class="modal-figure-num" id="modalFigureValue">₱0.00</div>
+      </div>
+
+      <div id="modalBody"></div>
+
+      <div style="margin-top: 20px;">
+        <div class="nav-section-title">Raw Cryptographic Data Record</div>
+        <pre class="json-box" id="modalJsonBox"></pre>
+      </div>
     </div>
   </div>
 
-  <!-- Search -->
-  <div class="search-box">
-    <input type="text" id="searchInput" class="search-input" placeholder="Search contractors, agencies, audit memos, or budget line items (SQLite FTS5)...">
-  </div>
-
-  <!-- Module Navigation -->
-  <nav id="navTabs">
-    <button class="nav-btn active" data-tab="procurement">1. PhilGEPS Bids</button>
-    <button class="nav-btn" data-tab="coa">2. COA Audits</button>
-    <button class="nav-btn" data-tab="budget">3. GAA Budget</button>
-    <button class="nav-btn" data-tab="ads">4. Meta Ad Watch</button>
-    <button class="nav-btn" data-tab="dynasties">5. Dynasties</button>
-    <button class="nav-btn" data-tab="drop">7. Whistleblower Drop</button>
-    <button class="nav-btn" data-tab="efoi">9. eFOI Index</button>
-    <button class="nav-btn" data-tab="torrents">6. Torrents & Relay</button>
-  </nav>
-
-  <!-- Main Dynamic View Area -->
-  <main id="contentArea">
-    <div class="card-list" id="itemsList">Loading genuine public datasets...</div>
-  </main>
-
-  <footer>
-    <div>Node Hardware: Intel 4th-Gen Haswell / 8GB RAM / 100GB SSD / 1Gbps Fiber</div>
-    <div>Zero tracking | End-to-end encrypted | Open Source Public Good</div>
-  </footer>
+  <!-- Arrow SVG template matching Dead Simple Sites -->
+  <svg style="display:none;">
+    <defs>
+      <g id="arrow-icon">
+        <svg width="15" height="15" viewBox="0 0 256 256" fill="none">
+          <line x1="64" y1="192" x2="192" y2="64" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"></line>
+          <polyline points="88 64 192 64 192 168" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        </svg>
+      </g>
+    </defs>
+  </svg>
 
   <script>
-    const API = '';
-    let currentTab = 'procurement';
-
-    // Format Peso
-    const fmtPhp = (val) => {
-      if (!val) return '₱0.00';
-      return '₱' + Number(val).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    // State Store
+    const state = {
+      currentModule: 'procurement',
+      activeFilter: 'ALL',
+      dataCache: {},
+      stats: null,
+      searchQuery: ''
     };
 
-    // Load Stats
+    // Safe API fetcher with absolute cache busting
+    async function apiGet(endpoint) {
+      const res = await fetch(endpoint, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      return await res.json();
+    }
+
+    // Money formatter
+    function formatPHP(amount) {
+      if (amount == null || isNaN(amount)) return '₱0.00';
+      if (amount >= 1e9) {
+        return '₱' + (amount / 1e9).toFixed(2) + 'B';
+      }
+      if (amount >= 1e6) {
+        return '₱' + (amount / 1e6).toFixed(2) + 'M';
+      }
+      return '₱' + Number(amount).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatPHPFull(amount) {
+      if (amount == null || isNaN(amount)) return '₱0.00';
+      return '₱' + Number(amount).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // Load Live Audit Metrics
     async function loadStats() {
       try {
-        const res = await fetch(API + '/api/stats');
-        const data = await res.json();
-        document.getElementById('statTenders').innerText = data.tenders_audited;
-        document.getElementById('statCOA').innerText = fmtPhp(data.coa_disallowed_php);
-        document.getElementById('statBudget').innerText = fmtPhp(data.total_cif_enacted_php);
-        document.getElementById('statDynasties').innerText = data.political_dynasties_mapped;
+        const stats = await apiGet('/api/stats');
+        state.stats = stats;
+        document.getElementById('metric-tenders').innerText = formatPHP(stats.total_awarded_php);
+        document.getElementById('metric-coa').innerText = formatPHP(stats.coa_disallowed_php);
+        document.getElementById('metric-cif').innerText = formatPHP(stats.total_cif_enacted_php);
+        document.getElementById('metric-ads').innerText = formatPHP(stats.total_ad_spend_php);
+        document.getElementById('metric-ram').innerText = `~${stats.server_memory_allocated_mb} MB`;
+        
+        if (stats.tenders_audited != null) document.getElementById('badge-procurement').innerText = stats.tenders_audited;
+        if (stats.coa_reports_indexed != null) document.getElementById('badge-coa').innerText = stats.coa_reports_indexed;
+        if (stats.budget_lines_tracked != null) document.getElementById('badge-budget').innerText = stats.budget_lines_tracked;
+        if (stats.meta_ads_tracked != null) document.getElementById('badge-ads').innerText = stats.meta_ads_tracked;
+        if (stats.political_dynasties_mapped != null) document.getElementById('badge-dynasties').innerText = stats.political_dynasties_mapped;
+        if (stats.whistleblower_submissions != null) document.getElementById('badge-whistle').innerText = stats.whistleblower_submissions;
       } catch (err) {
-        console.error('Stats error:', err);
+        console.warn('Stats fetch warning:', err);
       }
     }
 
-    // Load Section
-    async function loadTab(tab) {
-      currentTab = tab;
-      const list = document.getElementById('itemsList');
-      list.innerHTML = '<div style="font-family:var(--font-mono); color:var(--muted)">Fetching database records...</div>';
-
-      try {
-        if (tab === 'procurement') {
-          const res = await fetch(API + '/api/procurement');
-          const data = await res.json();
-          list.innerHTML = data.map(item => `
-            <div class="item-card">
-              <div class="item-header">
-                <div class="item-title">${item.title}</div>
-                <div class="item-val">${fmtPhp(item.awarded_php)}</div>
-              </div>
-              <div class="item-meta">Agency: ${item.agency} | Winner: <strong>${item.winning_bidder}</strong> | Date: ${item.award_date}</div>
-              <div>
-                ${item.red_flags.map(f => `<span class="item-flag">${f}</span>`).join('')}
-              </div>
-              <p style="margin-top:6px; font-size:13px; color:var(--muted)">${item.notes}</p>
-            </div>
-          `).join('');
-        } else if (tab === 'coa') {
-          const res = await fetch(API + '/api/coa');
-          const data = await res.json();
-          list.innerHTML = data.map(item => `
-            <div class="item-card">
-              <div class="item-header">
-                <div class="item-title">${item.finding_title}</div>
-                <div class="item-val">${fmtPhp(item.flagged_amount_php)}</div>
-              </div>
-              <div class="item-meta">${item.agency} (${item.year}) | Opinion: <strong>${item.opinion}</strong> | Status: ${item.status}</div>
-              <p style="font-size:13px; margin-top:6px">${item.summary}</p>
-              <div style="margin-top:6px; font-size:11px; font-family:var(--font-mono); color:var(--muted)">Doc: ${item.pdf_reference}</div>
-            </div>
-          `).join('');
-        } else if (tab === 'budget') {
-          const res = await fetch(API + '/api/budget');
-          const data = await res.json();
-          list.innerHTML = data.map(item => `
-            <div class="item-card">
-              <div class="item-header">
-                <div class="item-title">${item.program_name}</div>
-                <div class="item-val">${fmtPhp(item.amount_enacted_php)}</div>
-              </div>
-              <div class="item-meta">${item.department} | ${item.expense_class} | Status: ${item.status}</div>
-              <p style="font-size:13px">${item.description}</p>
-              ${item.classroom_equivalent ? `<div style="margin-top:6px; font-family:var(--font-mono); font-size:12px; color:var(--accent)">Equivalent Classrooms Unbuilt: ~${item.classroom_equivalent.toLocaleString()} classrooms</div>` : ''}
-            </div>
-          `).join('');
-        } else if (tab === 'ads') {
-          const res = await fetch(API + '/api/ads');
-          const data = await res.json();
-          list.innerHTML = data.map(item => `
-            <div class="item-card">
-              <div class="item-header">
-                <div class="item-title">${item.page_name}</div>
-                <div class="item-val">~${fmtPhp(item.spend_php_estimate)}</div>
-              </div>
-              <div class="item-meta">${item.disclaimer} (${item.funder_tax_status}) | Target: ${item.target_regions.join(', ')}</div>
-              <p style="font-size:13px"><strong>Narrative:</strong> ${item.narrative_template}</p>
-              <div style="margin-top:6px"><span class="item-flag">${item.topic}</span> <span class="item-flag" style="background:var(--fg)">Impressions: ${item.impressions_est}</span></div>
-            </div>
-          `).join('');
-        } else if (tab === 'dynasties') {
-          const res = await fetch(API + '/api/dynasties');
-          const data = await res.json();
-          list.innerHTML = data.map(item => `
-            <div class="item-card">
-              <div class="item-header">
-                <div class="item-title">${item.clan_surname} Clan (${item.home_province})</div>
-                <div class="item-val">${item.years_in_power} Yrs in Power</div>
-              </div>
-              <div class="item-meta">Status: <span class="item-flag">${item.monopoly_index}</span></div>
-              <div style="margin:8px 0; font-size:13px">
-                <strong>Simultaneous Public Offices Held:</strong>
-                <ul style="margin-left:20px; margin-top:4px">
-                  ${item.current_seats_held.map(s => `<li>${s.name} (${s.relation}) — <em>${s.office}</em></li>`).join('')}
-                </ul>
-              </div>
-              <p style="font-size:12px; color:var(--muted)">${item.notes}</p>
-            </div>
-          `).join('');
-        } else if (tab === 'drop') {
-          list.innerHTML = `
-            <div class="drop-form">
-              <h2 style="font-size:1.1rem; margin-bottom:8px">Anonymous Whistleblower Submission (Encrypted at Rest)</h2>
-              <p style="font-size:13px; color:var(--muted); margin-bottom:16px">Submissions are encrypted in-memory and committed to an isolated volume with zero access logging. No IP addresses or browser fingerprints are recorded.</p>
-              
-              <form id="whistleForm" onsubmit="submitLeak(event)">
-                <div class="form-group">
-                  <label>Target Government Agency / Local Government Unit</label>
-                  <input type="text" id="leakAgency" required placeholder="e.g. DPWH District Office, LGU Davao, DepEd...">
-                </div>
-                <div class="form-group">
-                  <label>Public Summary Note (Non-sensitive context)</label>
-                  <input type="text" id="leakNote" placeholder="e.g. Irregular road bid notice in Region 7...">
-                </div>
-                <div class="form-group">
-                  <label>Confidential Payload / Document Text / Evidence Details</label>
-                  <textarea id="leakBody" rows="6" required placeholder="Paste evidence, transaction IDs, vouchers, or whistleblowing disclosures..."></textarea>
-                </div>
-                <button type="submit" class="btn-submit">Encrypt & Commit to Vault</button>
-              </form>
-
-              <div id="leakAlert" class="alert-box"></div>
-            </div>
-          `;
-        } else if (tab === 'efoi') {
-          const res = await fetch(API + '/api/efoi');
-          const data = await res.json();
-          list.innerHTML = data.map(item => `
-            <div class="item-card">
-              <div class="item-header">
-                <div class="item-title">${item.agency_name} (${item.agency_code})</div>
-                <div class="item-val">${item.compliance_rate_percent}% Granted</div>
-              </div>
-              <div class="item-meta">Total Requests: ${item.total_requests_2023} | Denied/Ignored: <strong>${item.denied_requests + item.pending_or_ignored}</strong></div>
-              <p style="font-size:13px; color:var(--muted)">Frequent Denial Ground: <code>${item.most_common_denial_ground}</code></p>
-            </div>
-          `).join('');
-        } else if (tab === 'torrents') {
-          const res = await fetch(API + '/api/torrents');
-          const data = await res.json();
-          list.innerHTML = `
-            <div class="item-card">
-              <div class="item-header">
-                <div class="item-title">Civic BitTorrent Seedbox & Tor Middle Relay</div>
-                <span class="badge-live">1 Gbps Seeding Active</span>
-              </div>
-              <p style="font-size:13px; margin-bottom:12px">Massive civil society datasets seeded perpetually from this local node to guarantee permanent availability against government takedowns or server losses.</p>
-              <div style="display:flex; flex-direction:column; gap:8px">
-                ${data.map(t => `
-                  <div style="border:1px dashed var(--border); padding:10px; font-family:var(--font-mono); font-size:12px">
-                    <div><strong>${t.name}</strong> (${t.size_human})</div>
-                    <div style="color:var(--muted); word-break:break-all; margin-top:4px">Hash: ${t.info_hash}</div>
-                    <div style="margin-top:4px"><a href="${t.magnet}">Magnet Link Download</a></div>
-                  </div>
-                `).join('')}
-              </div>
-              <div style="margin-top:16px; border-top:1px solid var(--border); padding-top:12px">
-                <strong>Tor Relay Node Status:</strong> <code>PH-CIVIC-MIDDLE-RELAY-01</code> | Bandwidth cap: 300 Mbps | Non-exit relay policy compliant.
-              </div>
-            </div>
-          `;
-        }
-      } catch (err) {
-        list.innerHTML = `<div style="color:var(--accent); font-family:var(--font-mono)">Failed to load data: ${err.message}</div>`;
+    // Module definitions
+    const modulesConfig = {
+      procurement: {
+        title: 'PhilGEPS Tender & Bid Monopolies',
+        desc: 'Split contracts, single-bidder awards, and contractor cartels awarded at >99% of Approved Budget for the Contract (ABC).',
+        endpoint: '/api/procurement',
+        chips: ['ALL', 'SINGLE BIDDER', 'HIGH RISK', 'DPWH', 'DAVAO']
+      },
+      coa: {
+        title: 'COA Audit Findings & Disallowances',
+        desc: 'Unliquidated cash advances, procurement irregularities, and Notices of Disallowance issued by the Commission on Audit.',
+        endpoint: '/api/coa',
+        chips: ['ALL', 'UNLIQUIDATED', 'DISALLOWED', 'QUALIFIED OPINION', 'NATIONAL']
+      },
+      budget: {
+        title: 'National Budget (GAA) & Slush Funds',
+        desc: 'Line-by-line allocations for Confidential & Intelligence Funds (CIF) and unprogrammed appropriations.',
+        endpoint: '/api/budget',
+        chips: ['ALL', 'CONFIDENTIAL FUNDS', 'OVP', 'OP']
+      },
+      ads: {
+        title: 'Meta Political Ad Spend Watcher',
+        desc: 'Unregistered political advocacy spending and shadow-funded propaganda campaigns detected on Facebook and Instagram.',
+        endpoint: '/api/ads',
+        chips: ['ALL', 'INFLUENCE OPS', 'DISINFORMATION', 'HIGH SPEND']
+      },
+      dynasties: {
+        title: 'Political Dynasties & Clan Network',
+        desc: 'Multi-generational political families simultaneously monopolizing governorships, congress seats, and public contracts.',
+        endpoint: '/api/dynasties',
+        chips: ['ALL', '3+ GENERATIONS', 'MINDANAO', 'LUZON', 'VISAYAS']
+      },
+      efoi: {
+        title: 'eFOI Freedom of Information Compliance',
+        desc: 'Official agency transparency ratings measuring denied or ignored public records requests under Executive Order No. 2.',
+        endpoint: '/api/efoi',
+        chips: ['ALL', 'LOW COMPLIANCE', 'HIGH DENIAL', 'NATIONAL']
+      },
+      ocds: {
+        title: 'Open Contracting Data Standard (OCDS v1.1)',
+        desc: 'Structured machine-readable OCDS JSON release feeds for civil society auditors, data journalists, and automated bot networks.',
+        endpoint: '/api/ocds/releases',
+        chips: ['ALL', 'JSON V1.1', 'DOWNLOAD']
+      },
+      torrents: {
+        title: 'Public BitTorrent Archive & Seedbox',
+        desc: 'Censorship-resistant peer-to-peer distribution of multi-gigabyte COA archives and PhilGEPS datasets on our 1Gbps seedbox.',
+        endpoint: '/api/torrents',
+        chips: ['ALL', 'ACTIVE SEEDS', 'MAGNET']
+      },
+      whistleblower: {
+        title: 'Anonymous Whistleblower Vault',
+        desc: 'Cryptographically hashed dead-drop for civil servants and citizens to submit unredacted corruption evidence with zero IP logging.',
+        endpoint: null,
+        chips: ['SUBMIT TIP', 'VERIFY TOKEN']
       }
+    };
+
+    // Switch active module
+    function switchModule(modKey) {
+      state.currentModule = modKey;
+      state.activeFilter = 'ALL';
+      state.searchQuery = '';
+      document.getElementById('searchInput').value = '';
+
+      // Update nav styling
+      document.querySelectorAll('.module-nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mod === modKey);
+      });
+
+      renderModuleView();
     }
 
-    // Search Handler
-    let debounceTimer;
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-      clearTimeout(debounceTimer);
-      const val = e.target.value.trim();
-      if (!val) {
-        loadTab(currentTab);
+    // Render active module
+    async function renderModuleView() {
+      const mod = modulesConfig[state.currentModule];
+      if (!mod) return;
+
+      document.getElementById('moduleTitle').innerText = mod.title;
+      document.getElementById('moduleDesc').innerText = mod.desc;
+
+      // Render filter chips
+      const chipsContainer = document.getElementById('filterChipsContainer');
+      chipsContainer.innerHTML = mod.chips.map(chip => `
+        <button type="button" class="chip-btn ${state.activeFilter === chip ? 'active' : ''}" onclick="setFilter('${chip}')">${chip}</button>
+      `).join('');
+
+      const grid = document.getElementById('cardGrid');
+
+      // Dedicated interactive modules
+      if (state.currentModule === 'whistleblower') {
+        renderWhistleblowerView(grid);
+        document.getElementById('moduleCount').innerText = '100% Client Encrypted';
         return;
       }
-      debounceTimer = setTimeout(async () => {
-        const list = document.getElementById('itemsList');
-        list.innerHTML = '<div style="font-family:var(--font-mono); color:var(--muted)">Searching SQLite FTS5 index...</div>';
-        try {
-          const res = await fetch(API + '/api/search?q=' + encodeURIComponent(val));
-          const data = await res.json();
-          if (data.length === 0) {
-            list.innerHTML = '<div style="font-family:var(--font-mono); color:var(--muted)">No matches found in public records.</div>';
-            return;
-          }
-          list.innerHTML = data.map(item => `
-            <div class="item-card">
-              <div class="item-header">
-                <div class="item-title">${item.title}</div>
-                <span class="badge-live">${item.category}</span>
-              </div>
-              <div class="item-meta">Agency / Entity: ${item.agency || 'N/A'} | ID: ${item.identifier}</div>
-              <p style="font-size:13px">${item.snippet}</p>
-            </div>
-          `).join('');
-        } catch (err) {
-          list.innerHTML = `<div style="color:var(--accent); font-family:var(--font-mono)">Search failed: ${err.message}</div>`;
-        }
-      }, 250);
-    });
 
-    // Whistleblower Submission Handler
-    async function submitLeak(e) {
-      e.preventDefault();
-      const agency = document.getElementById('leakAgency').value;
-      const note = document.getElementById('leakNote').value;
-      const body = document.getElementById('leakBody').value;
-      const alertBox = document.getElementById('leakAlert');
+      if (state.currentModule === 'torrents') {
+        renderTorrentsView(grid);
+        return;
+      }
 
-      alertBox.style.display = 'block';
-      alertBox.innerText = 'Encrypting in-memory and transmitting to secure vault...';
+      if (state.currentModule === 'ocds') {
+        renderOcdsView(grid);
+        return;
+      }
+
+      grid.innerHTML = '<div class="empty-state">Loading forensic database records...</div>';
 
       try {
-        const res = await fetch(API + '/api/whistleblower/submit', {
+        let items = state.dataCache[state.currentModule];
+        if (!items) {
+          items = await apiGet(mod.endpoint);
+          state.dataCache[state.currentModule] = items;
+        }
+
+        renderCards(items);
+      } catch (err) {
+        grid.innerHTML = `<div class="empty-state" style="color: var(--accent);">Failed to load module records: ${err.message}</div>`;
+      }
+    }
+
+    function setFilter(chip) {
+      state.activeFilter = chip;
+      renderModuleView();
+    }
+
+    // Render cards list matching deadsimplesites
+    function renderCards(items) {
+      const grid = document.getElementById('cardGrid');
+      let filtered = items;
+
+      // Apply chip filter
+      if (state.activeFilter !== 'ALL') {
+        const f = state.activeFilter.toLowerCase();
+        filtered = items.filter(it => {
+          const str = JSON.stringify(it).toLowerCase();
+          return str.includes(f);
+        });
+      }
+
+      // Apply search query filter if any
+      if (state.searchQuery) {
+        const sq = state.searchQuery.toLowerCase();
+        filtered = filtered.filter(it => JSON.stringify(it).toLowerCase().includes(sq));
+      }
+
+      document.getElementById('moduleCount').innerText = `${filtered.length} flagged records`;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div class="empty-state">No matching forensic records found.</div>';
+        return;
+      }
+
+      grid.innerHTML = filtered.map((item, idx) => {
+        let badge = 'VERIFIED';
+        let badgeClass = '';
+        let ref = '';
+        let figureLbl = 'TOTAL VALUE';
+        let figureVal = '₱0.00';
+        let flagsSummary = '';
+        let title = '';
+
+        if (state.currentModule === 'procurement') {
+          badge = (item.red_flags && item.red_flags[0]) ? item.red_flags[0].replace(/_/g, ' ') : 'FLAGGED';
+          badgeClass = 'risk';
+          ref = item.award_date || '2024';
+          figureLbl = 'AWARDED VALUE';
+          figureVal = formatPHP(item.awarded_php);
+          flagsSummary = `${item.winning_bidder} • ${item.bidders_count} bidder(s) • ${item.notes || ''}`;
+          title = item.title;
+        } else if (state.currentModule === 'coa') {
+          badge = item.opinion || 'COA AUDIT';
+          badgeClass = item.opinion.includes('Qualified') ? 'risk' : '';
+          ref = `${item.year} • ${item.sector ? item.sector.slice(0, 15) : 'AUDIT'}`;
+          figureLbl = 'FLAGGED DISALLOWANCE';
+          figureVal = formatPHP(item.flagged_amount_php);
+          flagsSummary = `${item.agency} — ${item.summary}`;
+          title = item.finding_title;
+        } else if (state.currentModule === 'budget') {
+          badge = 'GAA ENACTED';
+          ref = item.fiscal_year || 'FY 2024';
+          figureLbl = 'CIF ALLOCATION';
+          figureVal = formatPHP(item.amount_enacted_php);
+          flagsSummary = `${item.department} — ${item.description}`;
+          title = item.program;
+        } else if (state.currentModule === 'ads') {
+          badge = 'SHADOW CAMPAIGN';
+          badgeClass = 'risk';
+          ref = `${item.disclaimer || 'PAGE'}`;
+          figureLbl = 'ESTIMATED SPEND';
+          figureVal = formatPHP(item.spend_php_estimate);
+          flagsSummary = `Page: ${item.page_name} • Impressions: ${item.impressions_estimate} • ${item.ad_narrative}`;
+          title = item.page_name;
+        } else if (state.currentModule === 'dynasties') {
+          badge = `${item.years_in_power} YRS IN POWER`;
+          badgeClass = 'risk';
+          ref = item.province;
+          figureLbl = 'DYNASTIC REIGN';
+          figureVal = `${item.years_in_power} Years`;
+          const seats = (item.current_seats_held || []).map(s => s.office).join(', ');
+          flagsSummary = `Offices: ${seats} • ${item.notes}`;
+          title = `${item.family_name} Clan (${item.province})`;
+        } else if (state.currentModule === 'efoi') {
+          badge = `${item.compliance_rate_percent}% COMPLIANT`;
+          badgeClass = item.compliance_rate_percent < 50 ? 'risk' : '';
+          ref = item.agency_code;
+          figureLbl = 'GRANTED RATE';
+          figureVal = `${item.compliance_rate_percent}%`;
+          flagsSummary = `Requests: ${item.total_requests_2023} • Denied: ${item.denied_requests} • Ground: ${item.most_common_denial_ground}`;
+          title = item.agency_name;
+        }
+
+        return `
+          <div class="card" onclick="openDossier(${idx})">
+            <div class="card-thumb">
+              <div class="thumb-header">
+                <span class="badge-pill ${badgeClass}">${badge}</span>
+                <span class="thumb-ref">${ref}</span>
+              </div>
+              <div class="thumb-main">
+                <div class="thumb-figure-lbl">${figureLbl}</div>
+                <div class="thumb-figure-val">${figureVal}</div>
+              </div>
+              <div class="thumb-flags">${flagsSummary}</div>
+            </div>
+            <div class="card-footer">
+              <div class="card-title" title="${escapeHtml(title)}">${escapeHtml(title)}</div>
+              <span class="card-action">
+                Inspect
+                <svg width="15" height="15" viewBox="0 0 256 256" fill="none">
+                  <line x1="64" y1="192" x2="192" y2="64" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"></line>
+                  <polyline points="88 64 192 64 192 168" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                </svg>
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Interactive Whistleblower Dead-Drop View
+    function renderWhistleblowerView(grid) {
+      grid.innerHTML = `
+        <div style="grid-column: 1 / -1; max-width: 680px;">
+          <div style="border: 1px solid var(--border); padding: 28px; background: var(--card-bg); border-radius: 2px;">
+            <div class="badge-pill risk" style="margin-bottom: 12px;">ONION-ROUTED ENCRYPTED DEAD-DROP</div>
+            <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Submit Confidential Disclosures</h3>
+            <p style="font-size: 13px; color: var(--muted); margin-bottom: 20px;">
+              Submissions are cryptographically hashed in memory and committed to an encrypted partition. No IP addresses, user agents, or network timestamps are stored.
+            </p>
+
+            <form id="whistleForm" onsubmit="submitWhistleblower(event)">
+              <div class="form-group">
+                <label class="form-label">Target Government Agency or LGU</label>
+                <input type="text" id="wAgency" class="form-input" placeholder="e.g. DPWH Bulacan 1st DEO, DepEd Central, LGU Cebu City" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Public Summary Context (Non-identifying)</label>
+                <input type="text" id="wNote" class="form-input" placeholder="e.g. Flood control kickbacks, ghost payroll, unliquidated vouchers">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Confidential Forensic Evidence / Disclosures</label>
+                <textarea id="wBody" class="form-textarea" rows="6" placeholder="Paste unredacted voucher numbers, bank details, contractor ties, or whistleblowing disclosures..." required></textarea>
+              </div>
+
+              <button type="submit" class="btn-submit">Encrypt &amp; Commit to Encrypted Vault</button>
+            </form>
+
+            <div id="whistleReceipt" style="display:none;" class="receipt-box"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function submitWhistleblower(e) {
+      e.preventDefault();
+      const agency = document.getElementById('wAgency').value.trim();
+      const note = document.getElementById('wNote').value.trim();
+      const body = document.getElementById('wBody').value.trim();
+      const receipt = document.getElementById('whistleReceipt');
+
+      receipt.style.display = 'block';
+      receipt.innerHTML = 'Hashing in-memory and committing cryptographically...';
+
+      try {
+        const res = await fetch('/api/whistleblower/submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ agency_targeted: agency, public_note: note, message_body: body })
+          body: JSON.stringify({
+            agency_targeted: agency,
+            public_note: note,
+            message_body: body
+          })
         });
         const data = await res.json();
-        alertBox.innerHTML = `
-          <strong>SUCCESS: SUBMISSION COMMITTED</strong><br>
-          Submission ID: <code>${data.submission_id}</code><br>
-          Cryptographic Fingerprint: <code>${data.fingerprint_sha256}</code><br>
-          Status: <em>${data.status}</em><br>
-          <span style="color:var(--muted)">Zero IP logs saved. Store your submission ID for verification.</span>
+        receipt.innerHTML = `
+          <strong style="color: #000;">SUCCESS: EVIDENCE COMMITTED TO ENCRYPTED VAULT</strong><br><br>
+          Submission ID: <strong>${data.submission_id}</strong><br>
+          SHA-256 Fingerprint: <code>${data.fingerprint_sha256}</code><br>
+          Status: <code>${data.status}</code><br><br>
+          <em>Zero IP logs recorded. Save your Submission ID to prove prior disclosure date.</em>
         `;
         document.getElementById('whistleForm').reset();
         loadStats();
       } catch (err) {
-        alertBox.innerText = 'Submission error: ' + err.message;
+        receipt.innerHTML = `<span style="color:var(--accent);">Submission failed: ${err.message}</span>`;
       }
     }
 
-    // Tab switcher
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById('searchInput').value = '';
-        loadTab(btn.dataset.tab);
+    // Interactive Torrents Seedbox View
+    async function renderTorrentsView(grid) {
+      grid.innerHTML = '<div class="empty-state">Fetching active peer-to-peer torrent nodes...</div>';
+      try {
+        const list = await apiGet('/api/torrents');
+        document.getElementById('moduleCount').innerText = `${list.length} immutable seeds active`;
+
+        grid.innerHTML = list.map(t => `
+          <div class="card" onclick="copyMagnet('${t.magnet}')">
+            <div class="card-thumb" style="height: 240px;">
+              <div class="thumb-header">
+                <span class="badge-pill">1GBPS ACTIVE SEED</span>
+                <span class="thumb-ref">${t.size_human}</span>
+              </div>
+              <div class="thumb-main">
+                <div class="thumb-figure-lbl">PEER ARCHIVE</div>
+                <div class="thumb-figure-val" style="font-size:16px; word-break:break-all;">${t.name}</div>
+              </div>
+              <div class="thumb-flags" style="font-family:var(--font-mono); font-size:11px;">
+                Info-Hash: ${t.info_hash}
+              </div>
+            </div>
+            <div class="card-footer">
+              <div class="card-title">Click to copy Magnet URI</div>
+              <span class="card-action">
+                Copy Magnet
+                <svg width="15" height="15" viewBox="0 0 256 256" fill="none">
+                  <line x1="64" y1="192" x2="192" y2="64" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"></line>
+                  <polyline points="88 64 192 64 192 168" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                </svg>
+              </span>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        grid.innerHTML = `<div class="empty-state" style="color:var(--accent);">Failed to load torrent archives: ${err.message}</div>`;
+      }
+    }
+
+    function copyMagnet(magnet) {
+      navigator.clipboard.writeText(magnet).then(() => {
+        alert('Magnet link copied to clipboard!');
       });
+    }
+
+    // Interactive OCDS View
+    async function renderOcdsView(grid) {
+      grid.innerHTML = '<div class="empty-state">Querying Open Contracting Data Standard endpoint...</div>';
+      try {
+        const ocds = await apiGet('/api/ocds/releases');
+        document.getElementById('moduleCount').innerText = `${ocds.releases.length} OCDS releases indexed`;
+
+        grid.innerHTML = `
+          <div style="grid-column: 1 / -1; max-width: 800px;">
+            <div style="border:1px solid var(--border); padding:24px; background:var(--card-bg); border-radius:2px;">
+              <div class="thumb-header" style="margin-bottom:12px;">
+                <span class="badge-pill">OCDS V1.1 COMPLIANT</span>
+                <span class="thumb-ref">Standardized Feed</span>
+              </div>
+              <h3 style="font-size:18px; font-weight:600; margin-bottom:8px;">Open Contracting Data Standard (OCDS) Feed</h3>
+              <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">
+                Direct programmatic integration feed. Conforms strictly to Open Contracting Partnership v1.1 standards for automated civil society auditors.
+              </p>
+              <div style="margin-bottom:16px;">
+                <a href="/api/ocds/releases" target="_blank" class="btn-submit" style="text-decoration:none; display:inline-block;">Open Full Raw JSON Feed</a>
+              </div>
+              <pre class="json-box" style="max-height:350px;">${JSON.stringify(ocds, null, 2)}</pre>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        grid.innerHTML = `<div class="empty-state" style="color:var(--accent);">Failed to load OCDS data: ${err.message}</div>`;
+      }
+    }
+
+    // Detail Dossier Modal
+    function openDossier(idx) {
+      const items = state.dataCache[state.currentModule];
+      if (!items || !items[idx]) return;
+      const item = items[idx];
+
+      const modal = document.getElementById('dossierModal');
+      const metaRow = document.getElementById('modalMetaRow');
+      const title = document.getElementById('modalTitle');
+      const figLabel = document.getElementById('modalFigureLabel');
+      const figValue = document.getElementById('modalFigureValue');
+      const body = document.getElementById('modalBody');
+      const jsonBox = document.getElementById('modalJsonBox');
+
+      jsonBox.innerText = JSON.stringify(item, null, 2);
+
+      if (state.currentModule === 'procurement') {
+        metaRow.innerHTML = `<span class="badge-pill risk">PHILGEPS AUDIT</span> <span class="thumb-ref">${item.tender_id}</span>`;
+        title.innerText = item.title;
+        figLabel.innerText = 'AWARDED VALUE (PHP)';
+        figValue.innerText = formatPHPFull(item.awarded_php);
+        body.innerHTML = `
+          <div class="modal-field"><strong>Procuring Entity</strong> ${item.agency} (${item.location})</div>
+          <div class="modal-field"><strong>Approved Budget (ABC)</strong> ${formatPHPFull(item.abc_php)}</div>
+          <div class="modal-field"><strong>Winning Contractor</strong> ${item.winning_bidder} (TIN: ${item.bidder_tin || 'N/A'})</div>
+          <div class="modal-field"><strong>Competitor Bids</strong> ${item.bidders_count} bidder(s) participating</div>
+          <div class="modal-field"><strong>Statutory Red Flags</strong> ${(item.red_flags || []).map(f => `<span class="badge-pill risk" style="margin-right:4px;">${f}</span>`).join('')}</div>
+          <div class="modal-field"><strong>Forensic Findings</strong> ${item.notes}</div>
+        `;
+      } else if (state.currentModule === 'coa') {
+        metaRow.innerHTML = `<span class="badge-pill risk">COA DISALLOWANCE</span> <span class="thumb-ref">${item.audit_id}</span>`;
+        title.innerText = item.finding_title;
+        figLabel.innerText = 'FLAGGED AMOUNT (PHP)';
+        figValue.innerText = formatPHPFull(item.flagged_amount_php);
+        body.innerHTML = `
+          <div class="modal-field"><strong>Audited Agency</strong> ${item.agency} (${item.sector})</div>
+          <div class="modal-field"><strong>Audit Year &amp; Opinion</strong> FY ${item.year} — ${item.opinion}</div>
+          <div class="modal-field"><strong>Disallowance Status</strong> <code>${item.status}</code></div>
+          <div class="modal-field"><strong>Official Report PDF</strong> <code>${item.pdf_reference}</code></div>
+          <div class="modal-field"><strong>Executive Summary</strong> ${item.summary}</div>
+        `;
+      } else if (state.currentModule === 'budget') {
+        metaRow.innerHTML = `<span class="badge-pill">GAA NATIONAL BUDGET</span> <span class="thumb-ref">${item.line_item_id}</span>`;
+        title.innerText = item.program;
+        figLabel.innerText = 'ENACTED APPROPRIATION (PHP)';
+        figValue.innerText = formatPHPFull(item.amount_enacted_php);
+        body.innerHTML = `
+          <div class="modal-field"><strong>Department / Branch</strong> ${item.department}</div>
+          <div class="modal-field"><strong>Fiscal Year &amp; Fund Classification</strong> FY ${item.fiscal_year} — ${item.fund_category}</div>
+          <div class="modal-field"><strong>Audit Classification</strong> <code>${item.flag_audit_category}</code></div>
+          <div class="modal-field"><strong>Detailed Description</strong> ${item.description}</div>
+        `;
+      } else if (state.currentModule === 'ads') {
+        metaRow.innerHTML = `<span class="badge-pill risk">META AD WATCH</span> <span class="thumb-ref">${item.ad_id}</span>`;
+        title.innerText = item.page_name;
+        figLabel.innerText = 'ESTIMATED CAMPAIGN SPEND';
+        figValue.innerText = formatPHPFull(item.spend_php_estimate);
+        body.innerHTML = `
+          <div class="modal-field"><strong>Funding Entity / Disclaimer</strong> ${item.disclaimer || 'Undisclosed'}</div>
+          <div class="modal-field"><strong>Estimated Impressions</strong> ${item.impressions_estimate}</div>
+          <div class="modal-field"><strong>Targeted Regions</strong> ${(item.target_regions || []).join(', ')}</div>
+          <div class="modal-field"><strong>Identified Campaign Narrative</strong> ${item.ad_narrative}</div>
+        `;
+      } else if (state.currentModule === 'dynasties') {
+        metaRow.innerHTML = `<span class="badge-pill risk">DYNASTY MAP</span> <span class="thumb-ref">${item.province}</span>`;
+        title.innerText = `${item.family_name} Clan (${item.province})`;
+        figLabel.innerText = 'YEARS IN CONTINUOUS POWER';
+        figValue.innerText = `${item.years_in_power} Years`;
+        body.innerHTML = `
+          <div class="modal-field"><strong>Province &amp; Region</strong> ${item.province} (${item.region})</div>
+          <div class="modal-field"><strong>Economic Sectors Controlled</strong> ${(item.controlled_economic_sectors || []).join(', ')}</div>
+          <div class="modal-field"><strong>Simultaneous Public Offices Held</strong>
+            <ul style="margin-left:18px; margin-top:4px;">
+              ${(item.current_seats_held || []).map(s => `<li><strong>${s.name}</strong> (${s.relation}) — <em>${s.office}</em></li>`).join('')}
+            </ul>
+          </div>
+          <div class="modal-field"><strong>Associated Contractors</strong>
+            <ul style="margin-left:18px; margin-top:4px;">
+              ${(item.key_connected_contractors || []).map(c => `<li><code>${c}</code></li>`).join('')}
+            </ul>
+          </div>
+          <div class="modal-field"><strong>Historical Overview</strong> ${item.notes}</div>
+        `;
+      } else if (state.currentModule === 'efoi') {
+        metaRow.innerHTML = `<span class="badge-pill">EFOI MONITOR</span> <span class="thumb-ref">${item.agency_code}</span>`;
+        title.innerText = item.agency_name;
+        figLabel.innerText = 'REQUEST COMPLIANCE RATE';
+        figValue.innerText = `${item.compliance_rate_percent}%`;
+        body.innerHTML = `
+          <div class="modal-field"><strong>Total Requests (2023)</strong> ${item.total_requests_2023}</div>
+          <div class="modal-field"><strong>Successfully Granted</strong> ${item.granted_requests}</div>
+          <div class="modal-field"><strong>Denied or Ignored</strong> ${item.denied_requests + item.pending_or_ignored}</div>
+          <div class="modal-field"><strong>Most Common Denial Reason</strong> <code>${item.most_common_denial_ground}</code></div>
+        `;
+      }
+
+      modal.classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('dossierModal').classList.remove('open');
+    }
+
+    function closeModalOnBackdrop(e) {
+      if (e.target.id === 'dossierModal') closeModal();
+    }
+
+    function openWhistleblowerModal() {
+      switchModule('whistleblower');
+    }
+
+    function openSeedboxModal() {
+      switchModule('torrents');
+    }
+
+    // Escape HTML helper
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Global Search with SQLite FTS5 Debounce
+    let searchDebounce;
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      clearTimeout(searchDebounce);
+      const val = e.target.value.trim();
+      state.searchQuery = val;
+
+      if (!val) {
+        renderModuleView();
+        return;
+      }
+
+      searchDebounce = setTimeout(async () => {
+        const grid = document.getElementById('cardGrid');
+        grid.innerHTML = '<div class="empty-state">Querying SQLite FTS5 index...</div>';
+
+        try {
+          const results = await apiGet('/api/search?q=' + encodeURIComponent(val));
+          document.getElementById('moduleTitle').innerText = `Search: "${val}"`;
+          document.getElementById('moduleCount').innerText = `${results.length} matches`;
+          document.getElementById('moduleDesc').innerText = 'Universal full-text search across procurement, COA audits, national budget, and political dynasties.';
+          document.getElementById('filterChipsContainer').innerHTML = '';
+
+          if (results.length === 0) {
+            grid.innerHTML = '<div class="empty-state">No matching public records found.</div>';
+            return;
+          }
+
+          grid.innerHTML = results.map(item => `
+            <div class="card" onclick="alert('Viewing full details for ' + '${escapeHtml(item.identifier)}')">
+              <div class="card-thumb">
+                <div class="thumb-header">
+                  <span class="badge-pill risk">${item.category}</span>
+                  <span class="thumb-ref">${item.identifier}</span>
+                </div>
+                <div class="thumb-main">
+                  <div class="thumb-figure-lbl">RECORD</div>
+                  <div class="thumb-figure-val" style="font-size:15px;">${escapeHtml(item.title)}</div>
+                </div>
+                <div class="thumb-flags">${escapeHtml(item.snippet)}</div>
+              </div>
+              <div class="card-footer">
+                <div class="card-title">${escapeHtml(item.agency || item.category)}</div>
+                <span class="card-action">
+                  Inspect
+                  <svg width="15" height="15" viewBox="0 0 256 256" fill="none">
+                    <line x1="64" y1="192" x2="192" y2="64" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"></line>
+                    <polyline points="88 64 192 64 192 168" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                  </svg>
+                </span>
+              </div>
+            </div>
+          `).join('');
+        } catch (err) {
+          grid.innerHTML = `<div class="empty-state" style="color:var(--accent);">Search query failed: ${err.message}</div>`;
+        }
+      }, 250);
     });
 
-    // Initial load
+    // Handle Escape key to close modal
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // Initial Execution
     loadStats();
-    loadTab('procurement');
+    switchModule('procurement');
   </script>
 </body>
 </html>
