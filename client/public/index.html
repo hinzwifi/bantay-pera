@@ -782,7 +782,7 @@
         </div>
         <nav class="top-nav">
           <button type="button" onclick="openWhistleblowerModal()">Tor Drop</button>
-          <button type="button" onclick="openSeedboxModal()">P2P Seedbox</button>
+          <button type="button" onclick="openSeedboxModal()">Seedbox Drop</button>
           <a href="/admin.html">Admin</a>
           <a href="/api/ocds/releases" target="_blank" rel="noopener">OCDS 1.1</a>
         </nav>
@@ -1549,14 +1549,135 @@
       }
     }
 
-    // Interactive Torrents Seedbox View
+    // Interactive Torrents Seedbox View with Integrated Dataset Drop Box
+    let stagedSeedboxFile = null;
+
+    function handleSeedboxFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      stagedSeedboxFile = file;
+      document.getElementById('sbFileStatus').innerText = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        document.getElementById('sbPayload').value = evt.target.result;
+        if (!document.getElementById('sbDatasetTitle').value) {
+          document.getElementById('sbDatasetTitle').value = file.name.replace(/\.[^/.]+$/, "");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    async function handleSeedboxDrop(e) {
+      e.preventDefault();
+      const title = document.getElementById('sbDatasetTitle').value.trim();
+      const agency = document.getElementById('sbAgency').value.trim();
+      const desc = document.getElementById('sbDescription').value.trim();
+      const payload = document.getElementById('sbPayload').value.trim();
+      const btn = document.getElementById('sbSubmitBtn');
+
+      if (!title || !payload) {
+        alert('Please provide both a Dataset Title and the Data Payload.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = 'Hashing & Quarantining (SHA3-512)...';
+
+      try {
+        const res = await apiPost('/api/seedbox/drop', {
+          dataset_title: title,
+          agency: agency,
+          description: desc,
+          data_payload: payload,
+          file_name: stagedSeedboxFile ? stagedSeedboxFile.name : `${title.replace(/[^a-zA-Z0-9]/g, '_')}.archive`,
+          file_size_bytes: stagedSeedboxFile ? stagedSeedboxFile.size : new TextEncoder().encode(payload).length
+        });
+
+        const receipt = document.getElementById('seedboxReceiptBox');
+        receipt.style.display = 'block';
+        receipt.innerHTML = `
+          <div style="font-size:13px; font-weight:600; color:#15803d; margin-bottom:6px;">
+            ✓ Dataset Ingested into 500GB Seedbox Air-Gap Quarantine
+          </div>
+          <p style="font-size:12px; color:var(--text); margin-bottom:10px;">
+            Your dataset is isolated in staging queue <code>${res.staging_id}</code>. A civic curator will verify the SHA3-512 cryptographic digest before packaging into <code>.tar.zst</code> and mounting to the 1Gbps BitTorrent swarm.
+          </p>
+          <div style="font-family:var(--font-mono); font-size:11px; background:#fff; padding:10px; border:1px solid var(--border); border-radius:2px; word-break:break-all;">
+            <div><strong>STAGING TICKET:</strong> ${res.staging_id}</div>
+            <div style="margin-top:4px;"><strong>SHA3-512 SIGNATURE:</strong> ${res.crypto_fingerprints.sha3_512}</div>
+            <div style="margin-top:4px;"><strong>BLAKE2b SIGNATURE:</strong> ${res.crypto_fingerprints.blake2b}</div>
+          </div>
+        `;
+
+        document.getElementById('seedboxDropForm').reset();
+        document.getElementById('sbFileStatus').innerText = '';
+        stagedSeedboxFile = null;
+      } catch (err) {
+        alert('Seedbox deposit failed: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Deposit into 500GB Seedbox Quarantine';
+      }
+    }
+
     async function renderTorrentsView(grid) {
       grid.innerHTML = '<div class="empty-state">Fetching active peer-to-peer torrent nodes...</div>';
       try {
         const list = await apiGet('/api/torrents');
         document.getElementById('moduleCount').innerText = `${list.length} immutable seeds active`;
 
-        grid.innerHTML = list.map(t => `
+        const dropBoxHtml = `
+          <div style="grid-column: 1 / -1; margin-bottom: 24px;">
+            <div style="border:1px solid var(--border); padding:24px; background:var(--card-bg); border-radius:3px;">
+              <div class="thumb-header" style="margin-bottom:12px;">
+                <span class="badge-pill risk">500GB SEEDBOX AIR-GAP</span>
+                <span class="thumb-ref">CIVIC DATASET DROP BOX</span>
+              </div>
+              <h3 style="font-size:16px; font-weight:600; margin-bottom:6px;">Seedbox Dataset Drop Box (1Gbps P2P Node)</h3>
+              <p style="font-size:13px; color:var(--muted); margin-bottom:16px; line-height:1.5;">
+                Deposit public audit reports, COA PDF disclosures, PhilGEPS contract tables, or FOI packages. Submissions are hashed with quantum-resistant SHA3-512 &amp; BLAKE2b and staged in the air-gap quarantine for curatorial verification before seeding to our 500GB BitTorrent swarm.
+              </p>
+
+              <form id="seedboxDropForm" onsubmit="handleSeedboxDrop(event)">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px; margin-bottom:12px;">
+                  <div>
+                    <label style="display:block; font-size:11px; font-family:var(--font-mono); text-transform:uppercase; margin-bottom:4px; color:var(--muted);">Dataset Title / Archive Name</label>
+                    <input type="text" id="sbDatasetTitle" class="search-input" placeholder="e.g. COA Audit Disallowances Region VII (2024)" required>
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:11px; font-family:var(--font-mono); text-transform:uppercase; margin-bottom:4px; color:var(--muted);">Source Agency / Origin</label>
+                    <input type="text" id="sbAgency" class="search-input" placeholder="e.g. Commission on Audit / DPWH" required>
+                  </div>
+                </div>
+
+                <div style="margin-bottom:12px;">
+                  <label style="display:block; font-size:11px; font-family:var(--font-mono); text-transform:uppercase; margin-bottom:4px; color:var(--muted);">Public Description / Provenance Summary</label>
+                  <input type="text" id="sbDescription" class="search-input" placeholder="e.g. Unliquidated infrastructure procurement records from official audit report" required>
+                </div>
+
+                <div style="margin-bottom:14px;">
+                  <label style="display:block; font-size:11px; font-family:var(--font-mono); text-transform:uppercase; margin-bottom:4px; color:var(--muted);">Dataset Payload (File or Raw Text Data)</label>
+                  <textarea id="sbPayload" class="search-input" rows="4" placeholder="Paste civic dataset CSV/JSON/evidence or select file below..." style="resize:vertical;" required></textarea>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                  <div>
+                    <input type="file" id="sbFileInput" onchange="handleSeedboxFile(event)" style="font-size:12px; font-family:var(--font-mono);">
+                    <span id="sbFileStatus" style="font-size:11px; color:var(--muted); margin-left:8px;"></span>
+                  </div>
+                  <button type="submit" class="btn-submit" id="sbSubmitBtn" style="padding:10px 20px; font-size:13px; font-weight:600; background:#000; color:#fff; border:none; cursor:pointer; border-radius:2px;">
+                    Deposit into 500GB Seedbox Quarantine
+                  </button>
+                </div>
+              </form>
+
+              <div id="seedboxReceiptBox" style="display:none; margin-top:16px; padding:16px; border:1px solid #15803d; background:rgba(21, 128, 61, 0.05); border-radius:3px;"></div>
+            </div>
+          </div>
+        `;
+
+        const cardsHtml = list.map(t => `
           <div class="card" onclick="copyMagnet('${t.magnet}')">
             <div class="card-thumb" style="height: 240px;">
               <div class="thumb-header">
@@ -1584,6 +1705,8 @@
             </div>
           </div>
         `).join('');
+
+        grid.innerHTML = dropBoxHtml + cardsHtml;
       } catch (err) {
         grid.innerHTML = `<div class="empty-state" style="color:var(--accent);">Failed to load torrent archives: ${err.message}</div>`;
       }

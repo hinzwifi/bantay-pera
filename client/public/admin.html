@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bantay-Pera Admin — Seedbox &amp; Quarantine Curator Portal</title>
-  <meta name="description" content="Curatorial admin console for Bantay-Pera. Gatekeeper against spam, malware, and abuse before public 500GB BitTorrent seeding. Quantum-hardened SHA3-512 and BLAKE2b validation.">
+  <meta name="description" content="Curatorial admin console for Bantay-Pera. Protected with memory-hard Argon2id password hashing, quantum-resistant SHA3-512 signatures, and 500GB BitTorrent quarantine staging.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
   <style>
     *, *::before, *::after {
@@ -201,7 +201,7 @@
     .storage-bar-inner {
       height: 100%;
       background: #000000;
-      width: 9.6%; /* 48GB / 500GB */
+      width: 9.6%;
     }
 
     .nav-section-title {
@@ -296,12 +296,13 @@
       border: 1px solid var(--border);
       padding: 32px;
       background: #ffffff;
+      border-radius: 4px;
     }
 
     .auth-title {
       font-size: 16px;
       font-weight: 600;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .auth-desc {
@@ -309,6 +310,31 @@
       color: var(--muted);
       line-height: 1.5;
       margin-bottom: 20px;
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    .auth-tab-btn {
+      background: none;
+      border: none;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 2px;
+    }
+
+    .auth-tab-btn.active {
+      color: #000000;
+      background: var(--card-bg);
     }
 
     .form-group {
@@ -407,7 +433,7 @@
       background: var(--success);
     }
 
-    /* Staging Queue Cards / Items */
+    /* Staging Queue Cards */
     .item-card {
       border: 1px solid var(--border);
       background: #ffffff;
@@ -435,6 +461,17 @@
       font-size: 12px;
       font-weight: 600;
       color: var(--text);
+    }
+
+    .type-pill {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 2px;
+      margin-left: 6px;
+      background: #000000;
+      color: #ffffff;
+      letter-spacing: 0.05em;
     }
 
     .status-badge {
@@ -532,12 +569,13 @@
       border-top: 1px solid var(--border);
     }
 
-    /* Torrents Table */
+    /* Tables */
     .table-container {
       border: 1px solid var(--border);
       overflow-x: auto;
       background: #ffffff;
       border-radius: 3px;
+      margin-bottom: 24px;
     }
 
     table {
@@ -572,18 +610,6 @@
       background: rgba(0, 0, 0, 0.015);
     }
 
-    .table-title {
-      font-weight: 600;
-      font-size: 13px;
-      margin-bottom: 3px;
-    }
-
-    .table-sub {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--muted);
-    }
-
     .empty-state {
       padding: 48px 24px;
       text-align: center;
@@ -615,7 +641,6 @@
       opacity: 1;
     }
 
-    /* Explainer Box */
     .security-notice {
       border: 1px solid var(--border);
       background: var(--card-bg);
@@ -650,7 +675,7 @@
       <div class="brand-header">
         <div>
           <div class="brand-title">BANTAY-PERA</div>
-          <div class="brand-sub">SEEDBOX &amp; CURATOR ADMIN</div>
+          <div class="brand-sub">ARGON2id &amp; SEEDBOX ADMIN</div>
         </div>
         <nav class="top-nav">
           <a href="/">← Public Site</a>
@@ -660,7 +685,7 @@
 
       <div class="aside-body">
         <p class="intro-p">
-          Dedicated air-gapped curatorial console. Quarantines whistleblower submissions, enforces SHA3-512 &amp; BLAKE2b verification, and approves legitimate civic datasets before seeding to the 500GB public BitTorrent swarm.
+          Curatorial administration console protected by memory-hard <strong>Argon2id</strong> password hashing and <strong>SHA3-512</strong> quantum-resistant verification.
         </p>
 
         <div class="metrics-panel">
@@ -684,34 +709,37 @@
             <div class="storage-bar-inner" id="storageBar"></div>
           </div>
           <div class="metrics-row">
-            <span class="metrics-label">Quantum Digest:</span>
-            <span class="metrics-val" style="color:var(--success);">FIPS 202 Keccak</span>
+            <span class="metrics-label">Auth Standard:</span>
+            <span class="metrics-val" style="color:var(--success);">Argon2id (m=64MB)</span>
           </div>
         </div>
 
-        <div class="nav-section-title">Curatorial Queue</div>
+        <div class="nav-section-title">Admin Navigation</div>
         <ul class="module-nav" id="adminNav" style="display:none;">
           <li>
-            <button class="module-nav-btn active" onclick="switchView('staging')">
+            <button class="module-nav-btn active" id="btnNavStaging" onclick="switchView('staging')">
               <span>Quarantine Review</span>
               <span class="badge-counter" id="navPendingCount">0</span>
             </button>
           </li>
           <li>
-            <button class="module-nav-btn" onclick="switchView('torrents')">
+            <button class="module-nav-btn" id="btnNavTorrents" onclick="switchView('torrents')">
               <span>Public BitTorrent Swarm</span>
               <span class="badge-counter" id="navTorrentsCount">0</span>
+            </button>
+          </li>
+          <li>
+            <button class="module-nav-btn" id="btnNavAccounts" onclick="switchView('accounts')">
+              <span>Admin Accounts (Argon2id)</span>
+              <span class="badge-counter" id="navAccountsCount">0</span>
             </button>
           </li>
         </ul>
 
         <div class="security-notice">
-          <h4>Air-Gap Quarantine Rationale</h4>
+          <h4>Argon2id Protection Standard</h4>
           <p>
-            Zero uncurated public seeding. Without this air-gap, adversaries could flood the 500GB hard drive with spam, malware, or illicit non-civic payloads.
-          </p>
-          <p>
-            Once you click <strong>Approve</strong>, the cryptographic package is packaged into `.tar.zst`, assigned a BitTorrent info-hash, and joined to the 1Gbps high-speed public seed swarms.
+            Administrative credentials are mathematically protected against GPU, ASIC, and distributed cluster attacks via Argon2id (RFC 9106) memory-hard key derivation.
           </p>
         </div>
       </div>
@@ -720,16 +748,36 @@
     <main class="main-content">
       <!-- Unauthenticated View -->
       <section id="authSection" class="auth-card">
-        <h2 class="auth-title">Curator Authentication Required</h2>
+        <h2 class="auth-title">Curator Authentication</h2>
         <p class="auth-desc">
-          Enter your civic administrator bearer token to manage the 500GB seedbox quarantine queue and approve cryptographic releases.
+          Sign in with your administrator credentials protected with Argon2id, or provide a cryptographic master bearer token.
         </p>
-        <form onsubmit="handleLogin(event)">
+
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab-btn active" id="tabBtnPassword" onclick="toggleAuthMode('password')">Argon2id Password</button>
+          <button type="button" class="auth-tab-btn" id="tabBtnToken" onclick="toggleAuthMode('token')">Master Bearer Token</button>
+        </div>
+
+        <!-- Password Auth Form -->
+        <form id="formPasswordAuth" onsubmit="handlePasswordLogin(event)">
           <div class="form-group">
-            <label class="form-label" for="adminTokenInput">Admin Bearer Token</label>
-            <input type="password" id="adminTokenInput" class="form-input" placeholder="bantay-curator-secret-key-..." required autofocus>
+            <label class="form-label" for="loginUsername">Admin Username</label>
+            <input type="text" id="loginUsername" class="form-input" placeholder="admin" required autofocus value="admin">
           </div>
-          <button type="submit" class="btn-primary">Unlock Curatorial Console</button>
+          <div class="form-group">
+            <label class="form-label" for="loginPassword">Argon2id Password</label>
+            <input type="password" id="loginPassword" class="form-input" placeholder="••••••••••••" required>
+          </div>
+          <button type="submit" class="btn-primary">Unlock with Argon2id</button>
+        </form>
+
+        <!-- Token Auth Form -->
+        <form id="formTokenAuth" style="display:none;" onsubmit="handleTokenLogin(event)">
+          <div class="form-group">
+            <label class="form-label" for="adminTokenInput">Master Bearer Token</label>
+            <input type="password" id="adminTokenInput" class="form-input" placeholder="Cryptographic token from .env...">
+          </div>
+          <button type="submit" class="btn-primary">Unlock with Bearer Token</button>
         </form>
       </section>
 
@@ -768,6 +816,56 @@
             </table>
           </div>
         </section>
+
+        <!-- Admin Accounts View (Argon2id) -->
+        <section id="accountsView" style="display:none;">
+          <div style="margin-bottom: 24px;">
+            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Active Administrative Accounts</h3>
+            <p style="font-size: 13px; color: var(--muted); margin-bottom: 16px;">
+              All passwords are encrypted with memory-hard Argon2id (64MB memory, 3 iterations, 4 parallelism). Raw passwords are never stored.
+            </p>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Password Protection</th>
+                    <th>Created (UTC)</th>
+                    <th>Last Login</th>
+                  </tr>
+                </thead>
+                <tbody id="accountsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Create Account Card -->
+          <div style="border: 1px solid var(--border); padding: 24px; border-radius: 4px; max-width: 500px; background: var(--card-bg);">
+            <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 6px;">Provision New Admin Account</h4>
+            <p style="font-size: 12px; color: var(--muted); margin-bottom: 16px;">
+              Will be hashed automatically with Argon2id before storage in SQLite.
+            </p>
+            <form onsubmit="handleCreateAccount(event)">
+              <div class="form-group">
+                <label class="form-label" for="newUsername">Username</label>
+                <input type="text" id="newUsername" class="form-input" required placeholder="curator_john">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="newPassword">Password (Min 10 chars)</label>
+                <input type="password" id="newPassword" class="form-input" minlength="10" required placeholder="StrongPassphrase2026#">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="newRole">Role</label>
+                <select id="newRole" class="form-input">
+                  <option value="curator">Curator (Seedbox Review)</option>
+                  <option value="superadmin">Superadmin</option>
+                </select>
+              </div>
+              <button type="submit" class="btn-primary" style="margin-top: 8px;">Create Argon2id Account</button>
+            </form>
+          </div>
+        </section>
       </div>
     </main>
   </div>
@@ -775,12 +873,12 @@
   <div id="toast" class="toast"></div>
 
   <script>
-    // State management
     const state = {
       token: sessionStorage.getItem('bantay_admin_token') || '',
       currentView: 'staging',
       stagingData: [],
-      torrentsData: []
+      torrentsData: [],
+      accountsData: []
     };
 
     function showToast(msg) {
@@ -790,10 +888,16 @@
       setTimeout(() => t.classList.remove('show'), 3500);
     }
 
+    function toggleAuthMode(mode) {
+      const isPass = mode === 'password';
+      document.getElementById('tabBtnPassword').classList.toggle('active', isPass);
+      document.getElementById('tabBtnToken').classList.toggle('active', !isPass);
+      document.getElementById('formPasswordAuth').style.display = isPass ? 'block' : 'none';
+      document.getElementById('formTokenAuth').style.display = isPass ? 'none' : 'block';
+    }
+
     async function apiRequest(path, method = 'GET', body = null) {
-      const headers = {
-        'Accept': 'application/json'
-      };
+      const headers = { 'Accept': 'application/json' };
       if (state.token) {
         headers['Authorization'] = 'Bearer ' + state.token;
       }
@@ -811,7 +915,7 @@
         sessionStorage.removeItem('bantay_admin_token');
         state.token = '';
         renderAuthState();
-        throw new Error('Unauthorized: Invalid or expired admin token.');
+        throw new Error('Unauthorized: Invalid or expired admin credentials.');
       }
 
       const data = await res.json();
@@ -821,7 +925,31 @@
       return data;
     }
 
-    function handleLogin(e) {
+    async function handlePasswordLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value;
+
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Login failed.');
+        }
+
+        state.token = data.token;
+        sessionStorage.setItem('bantay_admin_token', data.token);
+        initAdminSession();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function handleTokenLogin(e) {
       e.preventDefault();
       const val = document.getElementById('adminTokenInput').value.trim();
       if (!val) return;
@@ -830,7 +958,10 @@
       initAdminSession();
     }
 
-    function handleLogout() {
+    async function handleLogout() {
+      try {
+        await apiRequest('/api/admin/logout', 'POST');
+      } catch (e) {}
       sessionStorage.removeItem('bantay_admin_token');
       state.token = '';
       renderAuthState();
@@ -850,7 +981,7 @@
       if (!state.token) return;
 
       try {
-        await Promise.all([loadStagingQueue(), loadTorrents()]);
+        await Promise.all([loadStagingQueue(), loadTorrents(), loadAccounts()]);
         showToast('Curatorial session authenticated.');
       } catch (err) {
         showToast(err.message);
@@ -859,19 +990,23 @@
 
     function switchView(viewName) {
       state.currentView = viewName;
-      const navButtons = document.querySelectorAll('.module-nav-btn');
-      navButtons[0].classList.toggle('active', viewName === 'staging');
-      navButtons[1].classList.toggle('active', viewName === 'torrents');
+      document.getElementById('btnNavStaging').classList.toggle('active', viewName === 'staging');
+      document.getElementById('btnNavTorrents').classList.toggle('active', viewName === 'torrents');
+      document.getElementById('btnNavAccounts').classList.toggle('active', viewName === 'accounts');
 
       document.getElementById('stagingView').style.display = viewName === 'staging' ? 'block' : 'none';
       document.getElementById('torrentsView').style.display = viewName === 'torrents' ? 'block' : 'none';
+      document.getElementById('accountsView').style.display = viewName === 'accounts' ? 'block' : 'none';
 
       if (viewName === 'staging') {
         document.getElementById('viewHeaderTitle').innerText = 'Quarantine Review Queue';
         document.getElementById('viewHeaderDesc').innerText = 'Inspecting raw submissions held in the quarantine air-gap. Verify authenticity before signing for public BitTorrent broadcast.';
-      } else {
+      } else if (viewName === 'torrents') {
         document.getElementById('viewHeaderTitle').innerText = 'Curated 500GB Public BitTorrent Swarm';
         document.getElementById('viewHeaderDesc').innerText = 'Active civic forensics seeded on the 1Gbps high-speed fiber server. Fully authenticated against SHA3-512 hashes.';
+      } else {
+        document.getElementById('viewHeaderTitle').innerText = 'Administrative Accounts & Security';
+        document.getElementById('viewHeaderDesc').innerText = 'Manage authorized administrators. Protected with memory-hard Argon2id key derivation.';
       }
     }
 
@@ -880,9 +1015,12 @@
         if (state.currentView === 'staging') {
           await loadStagingQueue();
           showToast('Quarantine review queue updated.');
-        } else {
+        } else if (state.currentView === 'torrents') {
           await loadTorrents();
           showToast('Public BitTorrent swarm updated.');
+        } else {
+          await loadAccounts();
+          showToast('Admin accounts list updated.');
         }
       } catch (err) {
         showToast('Refresh failed: ' + err.message);
@@ -903,12 +1041,20 @@
       updateMetrics();
     }
 
+    async function loadAccounts() {
+      try {
+        const data = await apiRequest('/api/admin/accounts');
+        state.accountsData = data;
+        renderAccountsTable();
+        document.getElementById('navAccountsCount').innerText = data.length;
+      } catch (e) {}
+    }
+
     function updateMetrics() {
       const pending = state.stagingData.filter(s => s.status === 'PENDING_REVIEW').length;
       document.getElementById('navPendingCount').innerText = pending;
       document.getElementById('navTorrentsCount').innerText = state.torrentsData.length;
 
-      // Calculate storage
       let seededBytes = 0;
       state.torrentsData.forEach(t => {
         seededBytes += (t.size_bytes || 0);
@@ -939,12 +1085,14 @@
         if (isRejected) badgeClass = 'status-rejected';
 
         const sizeKb = item.file_size_bytes ? (item.file_size_bytes / 1024).toFixed(1) + ' KB' : 'N/A';
+        const isSeedboxDrop = item.id.startsWith('DROP-');
 
         return `
           <div class="item-card" id="card-${escapeHtml(item.id)}">
             <div class="item-top">
               <div>
                 <span class="item-id">${escapeHtml(item.id)}</span>
+                <span class="type-pill">${isSeedboxDrop ? 'SEEDBOX DATASET DROP' : 'TOR WHISTLEBLOWER LEAK'}</span>
                 <span style="font-size:12px; color:var(--muted); margin-left:8px;">${new Date(item.timestamp_utc).toLocaleString()}</span>
               </div>
               <span class="status-badge ${badgeClass}">${escapeHtml(item.status)}</span>
@@ -1010,34 +1158,57 @@
         return `
           <tr>
             <td>
-              <div class="table-title">${escapeHtml(t.name)}</div>
-              <div class="table-sub">Released: ${escapeHtml(t.published_date || '2026-10')}</div>
+              <div style="font-weight:600;">${escapeHtml(t.name)}</div>
+              <div style="font-family:var(--font-mono); font-size:11px; color:var(--muted);">Released: ${escapeHtml(t.published_date || '2026-10')}</div>
             </td>
             <td><strong>${escapeHtml(t.size_human || 'N/A')}</strong></td>
-            <td>
-              <code style="font-size:11px; user-select:all;" title="${escapeHtml(t.sha3_512)}">${escapeHtml(shortSha)}</code>
-            </td>
-            <td>
-              <code style="font-size:11px; user-select:all;" title="${escapeHtml(t.info_hash)}">${escapeHtml(shortHash)}</code>
-            </td>
-            <td>
-              <span class="status-badge status-approved">Seeding (${t.seeders_on_1gbps_node || 1})</span>
-            </td>
-            <td>
-              <button class="btn-secondary" onclick="copyMagnet('${escapeHtml(t.magnet)}')">Copy Magnet</button>
-            </td>
+            <td><code style="font-size:11px; user-select:all;" title="${escapeHtml(t.sha3_512)}">${escapeHtml(shortSha)}</code></td>
+            <td><code style="font-size:11px; user-select:all;" title="${escapeHtml(t.info_hash)}">${escapeHtml(shortHash)}</code></td>
+            <td><span class="status-badge status-approved">Seeding (${t.seeders_on_1gbps_node || 1})</span></td>
+            <td><button class="btn-secondary" onclick="copyMagnet('${escapeHtml(t.magnet)}')">Copy Magnet</button></td>
           </tr>
         `;
       }).join('');
     }
 
-    async function approveItem(id) {
-      if (!confirm('Are you sure you want to approve submission ' + id + '?\n\nThis will compute a BitTorrent info-hash, sign the SHA3-512 archive, and initiate live seeding on the 500GB volume.')) {
+    function renderAccountsTable() {
+      const tbody = document.getElementById('accountsTableBody');
+      if (!state.accountsData || state.accountsData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No accounts loaded.</td></tr>';
         return;
       }
+      tbody.innerHTML = state.accountsData.map(a => `
+        <tr>
+          <td><strong>${escapeHtml(a.username)}</strong></td>
+          <td><code>${escapeHtml(a.role)}</code></td>
+          <td><span class="status-badge status-approved">Argon2id (m=65536)</span></td>
+          <td>${new Date(a.created_at_utc).toLocaleString()}</td>
+          <td>${a.last_login_utc ? new Date(a.last_login_utc).toLocaleString() : 'Never'}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function handleCreateAccount(e) {
+      e.preventDefault();
+      const username = document.getElementById('newUsername').value.trim();
+      const password = document.getElementById('newPassword').value;
+      const role = document.getElementById('newRole').value;
 
       try {
-        const res = await apiRequest(`/api/admin/approve/${id}`, 'POST');
+        await apiRequest('/api/admin/accounts/create', 'POST', { username, password, role });
+        showToast(`Account '${username}' created with Argon2id!`);
+        document.getElementById('newUsername').value = '';
+        document.getElementById('newPassword').value = '';
+        await loadAccounts();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    async function approveItem(id) {
+      if (!confirm('Approve submission ' + id + ' for public BitTorrent seeding?')) return;
+      try {
+        await apiRequest(`/api/admin/approve/${id}`, 'POST');
         showToast('Approved! Released into public BitTorrent swarm.');
         await Promise.all([loadStagingQueue(), loadTorrents()]);
       } catch (err) {
@@ -1046,9 +1217,8 @@
     }
 
     async function rejectItem(id) {
-      const reason = prompt('Enter audit rejection reason (e.g. "Spam / Non-civic upload / Malicious payload"):', 'Non-civic / spam / unverified content');
+      const reason = prompt('Enter rejection reason:', 'Non-civic / spam / unverified content');
       if (reason === null) return;
-
       try {
         await apiRequest(`/api/admin/reject/${id}`, 'POST', { reason });
         showToast('Upload rejected and isolated from seedbox.');
@@ -1076,7 +1246,6 @@
         .replace(/'/g, '&#039;');
     }
 
-    // Auto-init if token present
     if (state.token) {
       initAdminSession();
     } else {

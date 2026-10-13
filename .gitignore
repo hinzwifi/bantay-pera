@@ -3,3 +3,7 @@ node_modules/
 *.log
 data/caddy_data/
 data/caddy_config/
+.env
+.env.*
+!.env.example
+
