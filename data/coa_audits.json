@@ -1,0 +1,62 @@
+[
+  {
+    "audit_id": "COA-AAR-2023-DEPED",
+    "year": 2023,
+    "agency": "Department of Education - Central Office",
+    "sector": "National Government Sector",
+    "opinion": "Qualified Opinion",
+    "flagged_amount_php": 2400000000.00,
+    "finding_title": "Unliquidated Cash Advances and Undelivered School Furniture",
+    "summary": "Cash advances granted to Special Disbursing Officers totaling ₱2.4B remained unliquidated beyond statutory 30-day reporting deadlines. Deficiencies in warehouse logistics led to procurement of school desks stored in private exposed compounds.",
+    "pdf_reference": "2023_DepEd_ExecutiveSummary_PartII.pdf",
+    "status": "UNRESOLVED_NOTICE_OF_SUSPENSION"
+  },
+  {
+    "audit_id": "COA-AAR-2023-QC",
+    "year": 2023,
+    "agency": "City Government of Quezon",
+    "sector": "Local Government Sector",
+    "opinion": "Unmodified Opinion",
+    "flagged_amount_php": 48200000.00,
+    "finding_title": "Delay in Infrastructure Project Implementations & Liquidated Damages",
+    "summary": "Delayed implementation of 14 infrastructure projects aggregating ₱48.2M resulted in non-imposition of statutory liquidated damages against defaulting contractors contrary to RA 9184.",
+    "pdf_reference": "2023_QuezonCity_AAR_PartII.pdf",
+    "status": "FOR_COMPLIANCE"
+  },
+  {
+    "audit_id": "COA-AAR-2023-DAVAO",
+    "year": 2023,
+    "agency": "City Government of Davao",
+    "sector": "Local Government Sector",
+    "opinion": "Qualified Opinion",
+    "flagged_amount_php": 460000000.00,
+    "finding_title": "Confidential & Intelligence Fund Liquidation Gaps",
+    "summary": "Disbursements totaling ₱460M funded under Confidential Expenses lacked timely intelligence liquidation receipts as mandated by COA-DBM-DILG-DND-JC No. 2015-01.",
+    "pdf_reference": "2023_DavaoCity_AAR_Observations.pdf",
+    "status": "NOTICE_OF_DISALLOWANCE_ISSUED"
+  },
+  {
+    "audit_id": "COA-AAR-2023-DOH",
+    "year": 2023,
+    "agency": "Department of Health",
+    "sector": "National Government Sector",
+    "opinion": "Qualified Opinion",
+    "flagged_amount_php": 7430000000.00,
+    "finding_title": "Expired Medical Commodities & Inefficient Cold-Chain Inventory",
+    "summary": "Inventory management issues led to near-expiry drugs and medical supplies valued at ₱7.43B stored in regional health warehouses without immediate redistribution to rural health units.",
+    "pdf_reference": "2023_DOH_AAR_ObservationsAndRecommendations.pdf",
+    "status": "RECOMMENDATION_REITERATED"
+  },
+  {
+    "audit_id": "COA-AAR-2023-DPWH-NCR",
+    "year": 2023,
+    "agency": "DPWH National Capital Region",
+    "sector": "National Government Sector",
+    "opinion": "Adverse Opinion",
+    "flagged_amount_php": 890000000.00,
+    "finding_title": "Defective Flood-Control Pumping Stations in Camanava",
+    "summary": "Technical inspection of 8 flood pumping stations showed sub-standard hydraulic pumps that broke down during monsoon season despite certificate of final inspection issued to contractor.",
+    "pdf_reference": "2023_DPWH_NCR_AAR_PartII.pdf",
+    "status": "FRAUD_AUDIT_REFERRAL"
+  }
+]

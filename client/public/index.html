@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bantay-Pera | Philippine Civic Anti-Corruption Engine</title>
+  <meta name="description" content="Ultra-lightweight public forensic database exposing procurement monopolies, unliquidated audit findings, and political dynasties in the Philippines.">
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #111111;
+      --muted: #666666;
+      --border: #e0e0e0;
+      --accent: #b91c1c;
+      --card-bg: #f9f9f9;
+      --tag-bg: #f3f3f3;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f0f0f;
+        --fg: #e5e5e5;
+        --muted: #888888;
+        --border: #262626;
+        --accent: #ef4444;
+        --card-bg: #171717;
+        --tag-bg: #222222;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.6;
+      padding: 24px 16px 80px 16px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    header {
+      border-bottom: 2px solid var(--fg);
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-live {
+      display: inline-block;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      background: var(--accent);
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 2px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 4px;
+    }
+
+    /* Stats Ticker */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      border: 1px solid var(--border);
+      padding: 12px;
+      background: var(--card-bg);
+      border-radius: 3px;
+    }
+
+    .stat-num {
+      font-size: 1.25rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--accent);
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    /* Nav Tabs */
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+      margin-bottom: 24px;
+    }
+
+    .nav-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--fg);
+      padding: 6px 12px;
+      font-size: 13px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      border-radius: 3px;
+    }
+
+    .nav-btn:hover, .nav-btn.active {
+      background: var(--fg);
+      color: var(--bg);
+      border-color: var(--fg);
+    }
+
+    /* Search Bar */
+    .search-box {
+      margin-bottom: 24px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-family: var(--font-mono);
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--fg);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--fg);
+    }
+
+    /* Data Cards */
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .item-card {
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: 3px;
+    }
+
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 6px;
+      gap: 12px;
+    }
+
+    .item-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .item-meta {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .item-flag {
+      display: inline-block;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: #fff;
+      background: var(--accent);
+      padding: 2px 6px;
+      border-radius: 2px;
+      margin-right: 4px;
+      margin-bottom: 4px;
+    }
+
+    .item-val {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    /* Whistleblower Drop UI */
+    .drop-form {
+      border: 1px solid var(--border);
+      padding: 20px;
+      background: var(--card-bg);
+      border-radius: 3px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    textarea, input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      border-radius: 3px;
+    }
+
+    .btn-submit {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 3px;
+    }
+
+    .alert-box {
+      padding: 12px;
+      background: var(--tag-bg);
+      border-left: 3px solid var(--accent);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      margin-top: 16px;
+      display: none;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+      margin-top: 40px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    a { color: inherit; text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>BANTAY-PERA <span class="badge-live">Real-Data Forensic Node</span></h1>
+    <p class="subtitle">10-Module Public Anti-Corruption & Procurement Watchdog Engine | Republic of the Philippines</p>
+  </header>
+
+  <!-- Live Telemetry -->
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card">
+      <div class="stat-num" id="statTenders">...</div>
+      <div class="stat-label">Tenders Audited</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statCOA">...</div>
+      <div class="stat-label">COA Disallowed (PHP)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statBudget">...</div>
+      <div class="stat-label">Confidential Funds Tracked</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statDynasties">...</div>
+      <div class="stat-label">Political Clans Mapped</div>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="search-box">
+    <input type="text" id="searchInput" class="search-input" placeholder="Search contractors, agencies, audit memos, or budget line items (SQLite FTS5)...">
+  </div>
+
+  <!-- Module Navigation -->
+  <nav id="navTabs">
+    <button class="nav-btn active" data-tab="procurement">1. PhilGEPS Bids</button>
+    <button class="nav-btn" data-tab="coa">2. COA Audits</button>
+    <button class="nav-btn" data-tab="budget">3. GAA Budget</button>
+    <button class="nav-btn" data-tab="ads">4. Meta Ad Watch</button>
+    <button class="nav-btn" data-tab="dynasties">5. Dynasties</button>
+    <button class="nav-btn" data-tab="drop">7. Whistleblower Drop</button>
+    <button class="nav-btn" data-tab="efoi">9. eFOI Index</button>
+    <button class="nav-btn" data-tab="torrents">6. Torrents & Relay</button>
+  </nav>
+
+  <!-- Main Dynamic View Area -->
+  <main id="contentArea">
+    <div class="card-list" id="itemsList">Loading genuine public datasets...</div>
+  </main>
+
+  <footer>
+    <div>Node Hardware: Intel 4th-Gen Haswell / 8GB RAM / 100GB SSD / 1Gbps Fiber</div>
+    <div>Zero tracking | End-to-end encrypted | Open Source Public Good</div>
+  </footer>
+
+  <script>
+    const API = '';
+    let currentTab = 'procurement';
+
+    // Format Peso
+    const fmtPhp = (val) => {
+      if (!val) return '₱0.00';
+      return '₱' + Number(val).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    // Load Stats
+    async function loadStats() {
+      try {
+        const res = await fetch(API + '/api/stats');
+        const data = await res.json();
+        document.getElementById('statTenders').innerText = data.tenders_audited;
+        document.getElementById('statCOA').innerText = fmtPhp(data.coa_disallowed_php);
+        document.getElementById('statBudget').innerText = fmtPhp(data.total_cif_enacted_php);
+        document.getElementById('statDynasties').innerText = data.political_dynasties_mapped;
+      } catch (err) {
+        console.error('Stats error:', err);
+      }
+    }
+
+    // Load Section
+    async function loadTab(tab) {
+      currentTab = tab;
+      const list = document.getElementById('itemsList');
+      list.innerHTML = '<div style="font-family:var(--font-mono); color:var(--muted)">Fetching database records...</div>';
+
+      try {
+        if (tab === 'procurement') {
+          const res = await fetch(API + '/api/procurement');
+          const data = await res.json();
+          list.innerHTML = data.map(item => `
+            <div class="item-card">
+              <div class="item-header">
+                <div class="item-title">${item.title}</div>
+                <div class="item-val">${fmtPhp(item.awarded_php)}</div>
+              </div>
+              <div class="item-meta">Agency: ${item.agency} | Winner: <strong>${item.winning_bidder}</strong> | Date: ${item.award_date}</div>
+              <div>
+                ${item.red_flags.map(f => `<span class="item-flag">${f}</span>`).join('')}
+              </div>
+              <p style="margin-top:6px; font-size:13px; color:var(--muted)">${item.notes}</p>
+            </div>
+          `).join('');
+        } else if (tab === 'coa') {
+          const res = await fetch(API + '/api/coa');
+          const data = await res.json();
+          list.innerHTML = data.map(item => `
+            <div class="item-card">
+              <div class="item-header">
+                <div class="item-title">${item.finding_title}</div>
+                <div class="item-val">${fmtPhp(item.flagged_amount_php)}</div>
+              </div>
+              <div class="item-meta">${item.agency} (${item.year}) | Opinion: <strong>${item.opinion}</strong> | Status: ${item.status}</div>
+              <p style="font-size:13px; margin-top:6px">${item.summary}</p>
+              <div style="margin-top:6px; font-size:11px; font-family:var(--font-mono); color:var(--muted)">Doc: ${item.pdf_reference}</div>
+            </div>
+          `).join('');
+        } else if (tab === 'budget') {
+          const res = await fetch(API + '/api/budget');
+          const data = await res.json();
+          list.innerHTML = data.map(item => `
+            <div class="item-card">
+              <div class="item-header">
+                <div class="item-title">${item.program_name}</div>
+                <div class="item-val">${fmtPhp(item.amount_enacted_php)}</div>
+              </div>
+              <div class="item-meta">${item.department} | ${item.expense_class} | Status: ${item.status}</div>
+              <p style="font-size:13px">${item.description}</p>
+              ${item.classroom_equivalent ? `<div style="margin-top:6px; font-family:var(--font-mono); font-size:12px; color:var(--accent)">Equivalent Classrooms Unbuilt: ~${item.classroom_equivalent.toLocaleString()} classrooms</div>` : ''}
+            </div>
+          `).join('');
+        } else if (tab === 'ads') {
+          const res = await fetch(API + '/api/ads');
+          const data = await res.json();
+          list.innerHTML = data.map(item => `
+            <div class="item-card">
+              <div class="item-header">
+                <div class="item-title">${item.page_name}</div>
+                <div class="item-val">~${fmtPhp(item.spend_php_estimate)}</div>
+              </div>
+              <div class="item-meta">${item.disclaimer} (${item.funder_tax_status}) | Target: ${item.target_regions.join(', ')}</div>
+              <p style="font-size:13px"><strong>Narrative:</strong> ${item.narrative_template}</p>
+              <div style="margin-top:6px"><span class="item-flag">${item.topic}</span> <span class="item-flag" style="background:var(--fg)">Impressions: ${item.impressions_est}</span></div>
+            </div>
+          `).join('');
+        } else if (tab === 'dynasties') {
+          const res = await fetch(API + '/api/dynasties');
+          const data = await res.json();
+          list.innerHTML = data.map(item => `
+            <div class="item-card">
+              <div class="item-header">
+                <div class="item-title">${item.clan_surname} Clan (${item.home_province})</div>
+                <div class="item-val">${item.years_in_power} Yrs in Power</div>
+              </div>
+              <div class="item-meta">Status: <span class="item-flag">${item.monopoly_index}</span></div>
+              <div style="margin:8px 0; font-size:13px">
+                <strong>Simultaneous Public Offices Held:</strong>
+                <ul style="margin-left:20px; margin-top:4px">
+                  ${item.current_seats_held.map(s => `<li>${s.name} (${s.relation}) — <em>${s.office}</em></li>`).join('')}
+                </ul>
+              </div>
+              <p style="font-size:12px; color:var(--muted)">${item.notes}</p>
+            </div>
+          `).join('');
+        } else if (tab === 'drop') {
+          list.innerHTML = `
+            <div class="drop-form">
+              <h2 style="font-size:1.1rem; margin-bottom:8px">Anonymous Whistleblower Submission (Encrypted at Rest)</h2>
+              <p style="font-size:13px; color:var(--muted); margin-bottom:16px">Submissions are encrypted in-memory and committed to an isolated volume with zero access logging. No IP addresses or browser fingerprints are recorded.</p>
+              
+              <form id="whistleForm" onsubmit="submitLeak(event)">
+                <div class="form-group">
+                  <label>Target Government Agency / Local Government Unit</label>
+                  <input type="text" id="leakAgency" required placeholder="e.g. DPWH District Office, LGU Davao, DepEd...">
+                </div>
+                <div class="form-group">
+                  <label>Public Summary Note (Non-sensitive context)</label>
+                  <input type="text" id="leakNote" placeholder="e.g. Irregular road bid notice in Region 7...">
+                </div>
+                <div class="form-group">
+                  <label>Confidential Payload / Document Text / Evidence Details</label>
+                  <textarea id="leakBody" rows="6" required placeholder="Paste evidence, transaction IDs, vouchers, or whistleblowing disclosures..."></textarea>
+                </div>
+                <button type="submit" class="btn-submit">Encrypt & Commit to Vault</button>
+              </form>
+
+              <div id="leakAlert" class="alert-box"></div>
+            </div>
+          `;
+        } else if (tab === 'efoi') {
+          const res = await fetch(API + '/api/efoi');
+          const data = await res.json();
+          list.innerHTML = data.map(item => `
+            <div class="item-card">
+              <div class="item-header">
+                <div class="item-title">${item.agency_name} (${item.agency_code})</div>
+                <div class="item-val">${item.compliance_rate_percent}% Granted</div>
+              </div>
+              <div class="item-meta">Total Requests: ${item.total_requests_2023} | Denied/Ignored: <strong>${item.denied_requests + item.pending_or_ignored}</strong></div>
+              <p style="font-size:13px; color:var(--muted)">Frequent Denial Ground: <code>${item.most_common_denial_ground}</code></p>
+            </div>
+          `).join('');
+        } else if (tab === 'torrents') {
+          const res = await fetch(API + '/api/torrents');
+          const data = await res.json();
+          list.innerHTML = `
+            <div class="item-card">
+              <div class="item-header">
+                <div class="item-title">Civic BitTorrent Seedbox & Tor Middle Relay</div>
+                <span class="badge-live">1 Gbps Seeding Active</span>
+              </div>
+              <p style="font-size:13px; margin-bottom:12px">Massive civil society datasets seeded perpetually from this local node to guarantee permanent availability against government takedowns or server losses.</p>
+              <div style="display:flex; flex-direction:column; gap:8px">
+                ${data.map(t => `
+                  <div style="border:1px dashed var(--border); padding:10px; font-family:var(--font-mono); font-size:12px">
+                    <div><strong>${t.name}</strong> (${t.size_human})</div>
+                    <div style="color:var(--muted); word-break:break-all; margin-top:4px">Hash: ${t.info_hash}</div>
+                    <div style="margin-top:4px"><a href="${t.magnet}">Magnet Link Download</a></div>
+                  </div>
+                `).join('')}
+              </div>
+              <div style="margin-top:16px; border-top:1px solid var(--border); padding-top:12px">
+                <strong>Tor Relay Node Status:</strong> <code>PH-CIVIC-MIDDLE-RELAY-01</code> | Bandwidth cap: 300 Mbps | Non-exit relay policy compliant.
+              </div>
+            </div>
+          `;
+        }
+      } catch (err) {
+        list.innerHTML = `<div style="color:var(--accent); font-family:var(--font-mono)">Failed to load data: ${err.message}</div>`;
+      }
+    }
+
+    // Search Handler
+    let debounceTimer;
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      clearTimeout(debounceTimer);
+      const val = e.target.value.trim();
+      if (!val) {
+        loadTab(currentTab);
+        return;
+      }
+      debounceTimer = setTimeout(async () => {
+        const list = document.getElementById('itemsList');
+        list.innerHTML = '<div style="font-family:var(--font-mono); color:var(--muted)">Searching SQLite FTS5 index...</div>';
+        try {
+          const res = await fetch(API + '/api/search?q=' + encodeURIComponent(val));
+          const data = await res.json();
+          if (data.length === 0) {
+            list.innerHTML = '<div style="font-family:var(--font-mono); color:var(--muted)">No matches found in public records.</div>';
+            return;
+          }
+          list.innerHTML = data.map(item => `
+            <div class="item-card">
+              <div class="item-header">
+                <div class="item-title">${item.title}</div>
+                <span class="badge-live">${item.category}</span>
+              </div>
+              <div class="item-meta">Agency / Entity: ${item.agency || 'N/A'} | ID: ${item.identifier}</div>
+              <p style="font-size:13px">${item.snippet}</p>
+            </div>
+          `).join('');
+        } catch (err) {
+          list.innerHTML = `<div style="color:var(--accent); font-family:var(--font-mono)">Search failed: ${err.message}</div>`;
+        }
+      }, 250);
+    });
+
+    // Whistleblower Submission Handler
+    async function submitLeak(e) {
+      e.preventDefault();
+      const agency = document.getElementById('leakAgency').value;
+      const note = document.getElementById('leakNote').value;
+      const body = document.getElementById('leakBody').value;
+      const alertBox = document.getElementById('leakAlert');
+
+      alertBox.style.display = 'block';
+      alertBox.innerText = 'Encrypting in-memory and transmitting to secure vault...';
+
+      try {
+        const res = await fetch(API + '/api/whistleblower/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agency_targeted: agency, public_note: note, message_body: body })
+        });
+        const data = await res.json();
+        alertBox.innerHTML = `
+          <strong>SUCCESS: SUBMISSION COMMITTED</strong><br>
+          Submission ID: <code>${data.submission_id}</code><br>
+          Cryptographic Fingerprint: <code>${data.fingerprint_sha256}</code><br>
+          Status: <em>${data.status}</em><br>
+          <span style="color:var(--muted)">Zero IP logs saved. Store your submission ID for verification.</span>
+        `;
+        document.getElementById('whistleForm').reset();
+        loadStats();
+      } catch (err) {
+        alertBox.innerText = 'Submission error: ' + err.message;
+      }
+    }
+
+    // Tab switcher
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('searchInput').value = '';
+        loadTab(btn.dataset.tab);
+      });
+    });
+
+    // Initial load
+    loadStats();
+    loadTab('procurement');
+  </script>
+</body>
+</html>

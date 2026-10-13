@@ -1,0 +1,62 @@
+[
+  {
+    "campaign_id": "META-PH-2024-9901",
+    "page_name": "Tunay na Balita Patrol PH",
+    "disclaimer": "Paid for by: Pilipinas Kong Mahal Coalition",
+    "funder_tax_status": "UNREGISTERED_ENTITY",
+    "target_regions": ["Central Luzon", "Davao Region", "NCR"],
+    "target_gender": "ALL",
+    "target_age": "18-45",
+    "spend_php_estimate": 1450000.00,
+    "impressions_est": "2.8M - 3.4M",
+    "topic": "ATTACK_AD_ICC_DEFENSE",
+    "narrative_template": "Claims International Criminal Court investigation violates national sovereignty; attacks human rights attorneys and local journalists.",
+    "creation_date": "2024-02-10",
+    "status": "FLAGGED_UNVERIFIED_DISCLAIMER"
+  },
+  {
+    "campaign_id": "META-PH-2024-9902",
+    "page_name": "Mindanao Progress Watch",
+    "disclaimer": "Paid for by: Unity & Sovereignty Movement",
+    "funder_tax_status": "DORMANT_NONPROFIT",
+    "target_regions": ["Northern Mindanao", "Davao Region", "Caraga"],
+    "target_gender": "MEN",
+    "target_age": "21-55",
+    "spend_php_estimate": 890000.00,
+    "impressions_est": "1.4M - 1.9M",
+    "topic": "CONFIDENTIAL_FUNDS_JUSTIFICATION",
+    "narrative_template": "Frames confidential funds as sole defense against insurgency; labels critics as state enemies.",
+    "creation_date": "2024-03-01",
+    "status": "ACTIVE"
+  },
+  {
+    "campaign_id": "META-PH-2024-9903",
+    "page_name": "Bagong Bayan Trends",
+    "disclaimer": "Paid for by: Digital Media Solutions Inc.",
+    "funder_tax_status": "COMMERCIAL_PR_AGENCY",
+    "target_regions": ["NCR", "CALABARZON", "Western Visayas"],
+    "target_gender": "ALL",
+    "target_age": "18-35",
+    "spend_php_estimate": 2300000.00,
+    "impressions_est": "4.5M - 5.2M",
+    "topic": "HISTORICAL_REVISIONISM",
+    "narrative_template": "Promotes economic myths regarding the 1970s Golden Age and frames anti-dynasty laws as foreign interventions.",
+    "creation_date": "2024-04-18",
+    "status": "TAKEN_DOWN_FOR_DISCLAIMER_VIOLATION"
+  },
+  {
+    "campaign_id": "META-PH-2024-9904",
+    "page_name": "Bantay Kongreso Daily",
+    "disclaimer": "Paid for by: Friends of Southern Governance",
+    "funder_tax_status": "UNREGISTERED_ENTITY",
+    "target_regions": ["SOCCSKSARGEN", "Davao Region"],
+    "target_gender": "ALL",
+    "target_age": "25-60",
+    "spend_php_estimate": 620000.00,
+    "impressions_est": "900K - 1.2M",
+    "topic": "ATTACK_AD_OPPOSITION_LAWMAKERS",
+    "narrative_template": "Micro-targets rural voters with doctored quotes attacking opposition budget critics.",
+    "creation_date": "2024-05-04",
+    "status": "ACTIVE"
+  }
+]

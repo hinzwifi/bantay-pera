@@ -1,0 +1,67 @@
+[
+  {
+    "line_item_id": "GAA-2024-OVP-CIF",
+    "fiscal_year": 2024,
+    "department": "Office of the Vice President",
+    "agency": "Office of the Vice President (Proper)",
+    "program_name": "General Administration and Support",
+    "expense_class": "MOOE - Confidential Expenses",
+    "amount_proposed_php": 500000000.00,
+    "amount_enacted_php": 0.00,
+    "status": "REALIGNED_BY_CONGRESS",
+    "classroom_equivalent": 200,
+    "description": "Proposed ₱500M confidential fund realigned to PCG and intelligence agencies guarding West Philippine Sea following civil society and congressional scrutiny."
+  },
+  {
+    "line_item_id": "GAA-2024-OP-CIF",
+    "fiscal_year": 2024,
+    "department": "Office of the President",
+    "agency": "The President's Offices",
+    "program_name": "National Security Advisory & Executive Management",
+    "expense_class": "MOOE - Confidential and Intelligence Expenses",
+    "amount_proposed_php": 4560000000.00,
+    "amount_enacted_php": 4560000000.00,
+    "status": "APPROVED_WITHOUT_CUTS",
+    "classroom_equivalent": 1824,
+    "description": "Lump-sum allocation split into ₱2.25B Confidential Expenses and ₱2.31B Intelligence Expenses exempt from standard public COA audit vouchers."
+  },
+  {
+    "line_item_id": "GAA-2024-DOH-SPECIALTY",
+    "fiscal_year": 2024,
+    "department": "Department of Health",
+    "agency": "National Specialty Centers",
+    "program_name": "Philippine General Hospital & Heart Center Modernization",
+    "expense_class": "Capital Outlays - Medical Equipment",
+    "amount_proposed_php": 12800000000.00,
+    "amount_enacted_php": 10900000000.00,
+    "status": "REDUCED_NET_1_9B",
+    "classroom_equivalent": 760,
+    "description": "₱1.9B reduction in hospital modernization budget during bicameral conference committee."
+  },
+  {
+    "line_item_id": "GAA-2024-DPWH-UNPROGRAMMED",
+    "fiscal_year": 2024,
+    "department": "Department of Public Works and Highways",
+    "agency": "Central Office & Regional Operations",
+    "program_name": "Unprogrammed Appropriations - Infrastructure Surcharge",
+    "expense_class": "Capital Outlays",
+    "amount_proposed_php": 281900000000.00,
+    "amount_enacted_php": 731400000000.00,
+    "status": "INCREASED_BY_CONGRESS_449B",
+    "classroom_equivalent": 179800,
+    "description": "Unprogrammed funds ballooned by ₱449.5B in bicameral conference committee without dedicated revenue counterpart, widely cited by economists as shadow pork barrel."
+  },
+  {
+    "line_item_id": "GAA-2024-DSWD-AICS",
+    "fiscal_year": 2024,
+    "department": "Department of Social Welfare and Development",
+    "agency": "Office of the Secretary",
+    "program_name": "Assistance to Individuals in Crisis Situations (AICS)",
+    "expense_class": "MOOE - Financial Assistance",
+    "amount_proposed_php": 26900000000.00,
+    "amount_enacted_php": 34300000000.00,
+    "status": "INCREASED_UNDER_CONGRESSIONAL_DISCRETION",
+    "classroom_equivalent": 2960,
+    "description": "Ayuda fund increased by ₱7.4B; watchdogs note distribution requires referral slips from local congressional offices."
+  }
+]

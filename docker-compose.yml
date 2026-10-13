@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # Bantay-Pera Core Civic Engine (<120MB RAM)
+  app:
+    build: .
+    container_name: bantay_pera_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      - ./data:/app/data
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+
+  # Automated SSL / HTTPS Reverse Proxy (<50MB RAM)
+  caddy:
+    image: caddy:2-alpine
+    container_name: bantay_pera_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/caddy_data:/data
+      - ./data/caddy_config:/config
+    depends_on:
+      - app
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+
+  # Optional Cloudflare Tunnel for 100% hidden residential home IP
+  # cloudflared:
+  #   image: cloudflare/cloudflared:latest
+  #   container_name: bantay_pera_tunnel
+  #   restart: unless-stopped
+  #   command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+  #   depends_on:
+  #     - caddy

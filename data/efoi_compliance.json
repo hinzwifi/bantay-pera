@@ -1,0 +1,52 @@
+[
+  {
+    "agency_code": "DOJ",
+    "agency_name": "Department of Justice",
+    "total_requests_2023": 412,
+    "successful_granted": 298,
+    "denied_requests": 84,
+    "pending_or_ignored": 30,
+    "compliance_rate_percent": 72.3,
+    "most_common_denial_ground": "ONGOING_INVESTIGATION_EXEMPTION"
+  },
+  {
+    "agency_code": "DPWH",
+    "agency_name": "Department of Public Works and Highways",
+    "total_requests_2023": 894,
+    "successful_granted": 312,
+    "denied_requests": 441,
+    "pending_or_ignored": 141,
+    "compliance_rate_percent": 34.9,
+    "most_common_denial_ground": "COMMERCIAL_SENSITIVITY_OF_CONTRACTOR"
+  },
+  {
+    "agency_code": "OP",
+    "agency_name": "Office of the President (Proper)",
+    "total_requests_2023": 620,
+    "successful_granted": 92,
+    "denied_requests": 418,
+    "pending_or_ignored": 110,
+    "compliance_rate_percent": 14.8,
+    "most_common_denial_ground": "EXECUTIVE_PRIVILEGE_AND_NATIONAL_SECURITY"
+  },
+  {
+    "agency_code": "DEPED",
+    "agency_name": "Department of Education",
+    "total_requests_2023": 1102,
+    "successful_granted": 640,
+    "denied_requests": 312,
+    "pending_or_ignored": 150,
+    "compliance_rate_percent": 58.0,
+    "most_common_denial_ground": "DATA_PRIVACY_ACT_INVOCATION"
+  },
+  {
+    "agency_code": "DBM",
+    "agency_name": "Department of Budget and Management",
+    "total_requests_2023": 750,
+    "successful_granted": 615,
+    "denied_requests": 85,
+    "pending_or_ignored": 50,
+    "compliance_rate_percent": 82.0,
+    "most_common_denial_ground": "ALREADY_PUBLISHED_ONLINE"
+  }
+]

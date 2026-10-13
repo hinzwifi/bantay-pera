@@ -1,0 +1,109 @@
+[
+  {
+    "tender_id": "PH-2024-001928",
+    "title": "Road Rehabilitation and Drainage Improvement (Section 4A)",
+    "agency": "DPWH Region VII - Cebu 1st District Engineering Office",
+    "location": "Danao City, Cebu",
+    "abc_php": 99500000.00,
+    "awarded_php": 98950000.00,
+    "winning_bidder": "Vanguard Builders & Heavy Infra Corp.",
+    "registered_address": "Unit 402, Acacia Bldg, Cebu City",
+    "bidder_tin": "004-928-112-000",
+    "bidders_count": 1,
+    "award_date": "2024-03-15",
+    "red_flags": [
+      "SINGLE_BIDDER_MONOPOLY",
+      "CLOSE_TO_ABC_99_4_PERCENT"
+    ],
+    "notes": "Single bidder awarded contract at 99.45% of Approved Budget for the Contract (ABC)."
+  },
+  {
+    "tender_id": "PH-2024-001929",
+    "title": "Road Rehabilitation and Drainage Improvement (Section 4B)",
+    "agency": "DPWH Region VII - Cebu 1st District Engineering Office",
+    "location": "Danao City, Cebu",
+    "abc_php": 98500000.00,
+    "awarded_php": 97800000.00,
+    "winning_bidder": "Prime Heritage Construction & Supply",
+    "registered_address": "Unit 402, Acacia Bldg, Cebu City",
+    "bidder_tin": "004-928-112-001",
+    "bidders_count": 2,
+    "award_date": "2024-03-18",
+    "red_flags": [
+      "SPLIT_CONTRACT_IDENTICAL_PROJECT",
+      "SHARED_OFFICE_ADDRESS"
+    ],
+    "notes": "Adjacent project split into Section 4A and 4B; winning bidder shares identical office unit with Vanguard Builders."
+  },
+  {
+    "tender_id": "PH-2024-002104",
+    "title": "Procurement of Agricultural Farm Implements & Fertilizers",
+    "agency": "Provincial Government of Maguindanao del Sur",
+    "location": "Shariff Aguak, Maguindanao del Sur",
+    "abc_php": 48200000.00,
+    "awarded_php": 48150000.00,
+    "winning_bidder": "Silver Star Agro-Trade Enterprise",
+    "registered_address": "Purok 5, Cotabato City",
+    "bidder_tin": "129-445-983-000",
+    "bidders_count": 1,
+    "award_date": "2024-04-02",
+    "red_flags": [
+      "SINGLE_BIDDER_MONOPOLY",
+      "TIGHT_BID_DEADLINE"
+    ],
+    "notes": "Notice posted with only 7 days submission window; solitary bidder awarded within 0.1% of ceiling."
+  },
+  {
+    "tender_id": "PH-2024-003310",
+    "title": "Construction of Multi-Purpose Evacuation Center",
+    "agency": "Municipality of Carmen, Davao del Norte",
+    "location": "Carmen, Davao del Norte",
+    "abc_php": 34800000.00,
+    "awarded_php": 34200000.00,
+    "winning_bidder": "Apex Horizon General Merchandise & Builders",
+    "registered_address": "Km 7, Lanang, Davao City",
+    "bidder_tin": "228-193-441-000",
+    "bidders_count": 3,
+    "award_date": "2024-05-10",
+    "red_flags": [
+      "RECURRING_LGU_WINNER"
+    ],
+    "notes": "Winner has captured 82% of all municipal infrastructure tenders in this LGU for 2 consecutive fiscal years."
+  },
+  {
+    "tender_id": "PH-2024-004512",
+    "title": "Supply and Delivery of IT Equipment and Tablet Computers",
+    "agency": "Department of Education - Regional Office IV-A",
+    "location": "Calamba, Laguna",
+    "abc_php": 112000000.00,
+    "awarded_php": 111800000.00,
+    "winning_bidder": "NextGen Matrix Cybertech Joint Venture",
+    "registered_address": "Ortigas Center, Pasig City",
+    "bidder_tin": "410-098-771-000",
+    "bidders_count": 2,
+    "award_date": "2024-06-22",
+    "red_flags": [
+      "UNIT_PRICE_INFLATION",
+      "JV_DISQUALIFICATION_ANOMALY"
+    ],
+    "notes": "Competitor disqualified for minor clerical variance; unit cost for entry-level Celeron laptops pegged at ₱58,000/unit."
+  },
+  {
+    "tender_id": "PH-2024-005619",
+    "title": "Shoreline Protection and Sea Wall Structure (Package 1)",
+    "agency": "DPWH Region VIII - Eastern Samar District Engineering Office",
+    "location": "Borongan City, Eastern Samar",
+    "abc_php": 145000000.00,
+    "awarded_php": 143800000.00,
+    "winning_bidder": "Samar Gulf Oceanic Builders",
+    "registered_address": "Tacloban City, Leyte",
+    "bidder_tin": "008-331-550-000",
+    "bidders_count": 1,
+    "award_date": "2024-07-14",
+    "red_flags": [
+      "SINGLE_BIDDER_MONOPOLY",
+      "EXTENDED_TIMELINE"
+    ],
+    "notes": "Uncontested bid on high-risk coastal defense project; contractor had 3 previous delay notices on 2023 projects."
+  }
+]

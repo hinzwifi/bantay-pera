@@ -1,0 +1,5 @@
+node_modules/
+.DS_Store
+*.log
+data/caddy_data/
+data/caddy_config/

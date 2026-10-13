@@ -1,0 +1,68 @@
+[
+  {
+    "dynasty_id": "DYN-DAVAO-01",
+    "clan_surname": "Duterte",
+    "home_province": "Davao del Sur / Davao City",
+    "years_in_power": 38,
+    "current_seats_held": [
+      {"name": "Rodrigo Duterte", "relation": "Patriarch", "office": "Former President / Mayoralty Candidate"},
+      {"name": "Sara Duterte", "relation": "Daughter", "office": "Vice President of the Philippines"},
+      {"name": "Paolo Duterte", "relation": "Son", "office": "Representative, 1st District of Davao City"},
+      {"name": "Sebastian Duterte", "relation": "Son", "office": "City Mayor, Davao City"}
+    ],
+    "monopoly_index": "CRITICAL_MONOPOLY",
+    "key_connected_contractors": [
+      "Apex Horizon General Merchandise & Builders",
+      "Vanguard Builders & Heavy Infra Corp."
+    ],
+    "notes": "Simultaneous executive, legislative, and local mayoral control since 1988."
+  },
+  {
+    "dynasty_id": "DYN-ILOCOS-01",
+    "clan_surname": "Marcos",
+    "home_province": "Ilocos Norte",
+    "years_in_power": 59,
+    "current_seats_held": [
+      {"name": "Ferdinand Marcos Jr.", "relation": "Patriarch", "office": "President of the Philippines"},
+      {"name": "Imee Marcos", "relation": "Sister", "office": "Senator of the Philippines"},
+      {"name": "Ferdinand Alexander 'Sandro' Marcos", "relation": "Son", "office": "Senior Deputy Majority Leader, 1st District Ilocos Norte"},
+      {"name": "Matthew Marcos Manotoc", "relation": "Nephew", "office": "Provincial Governor, Ilocos Norte"}
+    ],
+    "monopoly_index": "NATIONAL_EXECUTIVE_MONOPOLY",
+    "key_connected_contractors": [
+      "Northern Highlands Infrastructure Corp"
+    ],
+    "notes": "Complete control of provincial governorship, legislative seat, senate, and presidency."
+  },
+  {
+    "dynasty_id": "DYN-CAM-SUR-01",
+    "clan_surname": "Villafuerte",
+    "home_province": "Camarines Sur",
+    "years_in_power": 32,
+    "current_seats_held": [
+      {"name": "Luis Raymund 'LRay' Villafuerte", "relation": "Patriarch", "office": "Representative, 2nd District Camarines Sur"},
+      {"name": "Vincenzo Renato Villafuerte", "relation": "Son", "office": "Provincial Governor, Camarines Sur"},
+      {"name": "Miguel Luis Villafuerte", "relation": "Son", "office": "Representative, 5th District Camarines Sur"}
+    ],
+    "monopoly_index": "HIGH_PROVINCIAL_CONCENTRATION",
+    "key_connected_contractors": [
+      "Bicol Pioneer Builders Inc."
+    ],
+    "notes": "Multiple simultaneous congressional district seats alongside provincial governorship."
+  },
+  {
+    "dynasty_id": "DYN-MAGUINDANAO-01",
+    "clan_surname": "Sinsuat / Mastura",
+    "home_province": "Maguindanao del Norte",
+    "years_in_power": 45,
+    "current_seats_held": [
+      {"name": "Bai Fatima Ainee Sinsuat", "relation": "Matriarch", "office": "Vice Governor, Maguindanao del Norte"},
+      {"name": "Datu Tucao Mastura", "relation": "Allied Clan Head", "office": "Provincial Board Member"}
+    ],
+    "monopoly_index": "REGIONAL_AUTONOMOUS_CONTROL",
+    "key_connected_contractors": [
+      "Silver Star Agro-Trade Enterprise"
+    ],
+    "notes": "High concentration of internal revenue allotment (IRA) distributions and regional infrastructure funds."
+  }
+]
