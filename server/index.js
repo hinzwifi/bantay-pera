@@ -414,6 +414,48 @@ app.post('/api/whistleblower/submit', async (req, res) => {
   }
 });
 
+// GET /api/whistleblower/list - Public ledger of encrypted leaks (redacted evidence, public hashes)
+app.get('/api/whistleblower/list', async (req, res) => {
+  try {
+    if (sqliteAvailable) {
+      const rows = await queryAll('SELECT submission_id, timestamp_utc, agency_targeted, description_digest, encrypted_payload_hash as fingerprint_sha256, verification_status as status FROM whistleblower_vault ORDER BY timestamp_utc DESC');
+      if (rows && rows.length > 0) {
+        return res.json(rows);
+      }
+    }
+  } catch (err) {
+    console.warn('[Whistleblower list DB fallback]:', err.message);
+  }
+  // Return in-memory list reversed (newest first)
+  res.json([...inMemoryWhistleblowerVault].reverse());
+});
+
+// GET /api/whistleblower/verify/:id - Verify submission token validity & SHA-256 integrity
+app.get('/api/whistleblower/verify/:id', async (req, res) => {
+  const token = (req.params.id || '').trim().toUpperCase();
+  try {
+    if (sqliteAvailable) {
+      const rows = await queryAll('SELECT submission_id, timestamp_utc, agency_targeted, description_digest, encrypted_payload_hash as fingerprint_sha256, verification_status as status FROM whistleblower_vault WHERE UPPER(submission_id) = ? OR encrypted_payload_hash = ?', [token, token.toLowerCase()]);
+      if (rows && rows.length > 0) {
+        return res.json({ verified: true, record: rows[0] });
+      }
+    }
+  } catch (err) {
+    console.warn('[Whistleblower verify DB fallback]:', err.message);
+  }
+
+  const match = inMemoryWhistleblowerVault.find(r => 
+    r.submission_id.toUpperCase() === token || 
+    r.fingerprint_sha256.toLowerCase() === token.toLowerCase()
+  );
+
+  if (match) {
+    return res.json({ verified: true, record: match });
+  }
+
+  res.status(404).json({ verified: false, message: 'Submission token or SHA-256 fingerprint not found in ledger.' });
+});
+
 // Torrent Feeds Endpoint
 app.get('/api/torrents', (req, res) => {
   res.json([

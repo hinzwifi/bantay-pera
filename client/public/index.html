@@ -673,13 +673,92 @@
       opacity: 0.8;
     }
 
-    .receipt-box {
-      margin-top: 16px;
-      padding: 16px;
-      border: 1px solid #000000;
-      background: rgba(0, 0, 0, 0.02);
+    .vault-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    .vault-tab-btn {
+      background: none;
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      color: var(--muted);
+      border-radius: 2px;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .vault-tab-btn:hover {
+      border-color: #000000;
+      color: #000000;
+    }
+
+    .vault-tab-btn.active {
+      background: #000000;
+      color: #ffffff;
+      border-color: #000000;
+      font-weight: 500;
+    }
+
+    .vault-badge {
+      font-size: 11px;
       font-family: var(--font-mono);
-      font-size: 12px;
+      background: rgba(0, 0, 0, 0.08);
+      padding: 1px 5px;
+      border-radius: 2px;
+    }
+
+    .vault-tab-btn.active .vault-badge {
+      background: rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+    }
+
+    .vault-table-wrapper {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      border-radius: 2px;
+      overflow-x: auto;
+    }
+
+    .vault-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    .vault-table th {
+      background: rgba(0, 0, 0, 0.025);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+
+    .vault-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .vault-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .vault-table tr:hover td {
+      background: rgba(0, 0, 0, 0.015);
     }
 
     /* Empty state */
@@ -996,8 +1075,8 @@
       whistleblower: {
         title: 'Anonymous Whistleblower Vault',
         desc: 'Cryptographically hashed dead-drop for civil servants and citizens to submit unredacted corruption evidence with zero IP logging.',
-        endpoint: null,
-        chips: ['SUBMIT TIP', 'VERIFY TOKEN']
+        endpoint: '/api/whistleblower/list',
+        chips: ['VIEW SUBMISSIONS', 'SUBMIT TIP', 'VERIFY TOKEN']
       }
     };
 
@@ -1184,29 +1263,161 @@
     }
 
     // Interactive Whistleblower Dead-Drop View
-    function renderWhistleblowerView(grid) {
+    async function renderWhistleblowerView(grid) {
+      const activeTab = (state.activeFilter === 'SUBMIT TIP' || state.activeFilter === 'VERIFY TOKEN') 
+        ? state.activeFilter 
+        : 'VIEW SUBMISSIONS';
+
       grid.innerHTML = `
-        <div style="grid-column: 1 / -1; max-width: 680px;">
+        <div style="grid-column: 1 / -1; width: 100%;">
+          <!-- Sub-tabs -->
+          <div class="vault-tabs">
+            <button type="button" class="vault-tab-btn ${activeTab === 'VIEW SUBMISSIONS' ? 'active' : ''}" onclick="setFilter('VIEW SUBMISSIONS')">
+              <span>Encrypted Vault Ledger</span>
+              <span class="vault-badge" id="vaultCountBadge">...</span>
+            </button>
+            <button type="button" class="vault-tab-btn ${activeTab === 'SUBMIT TIP' ? 'active' : ''}" onclick="setFilter('SUBMIT TIP')">
+              <span>+ Submit Confidential Tip</span>
+            </button>
+            <button type="button" class="vault-tab-btn ${activeTab === 'VERIFY TOKEN' ? 'active' : ''}" onclick="setFilter('VERIFY TOKEN')">
+              <span>Verify Receipt Token</span>
+            </button>
+          </div>
+
+          <div id="vaultContentArea">
+            <div class="empty-state">Loading encrypted vault records...</div>
+          </div>
+        </div>
+      `;
+
+      const contentArea = document.getElementById('vaultContentArea');
+
+      if (activeTab === 'SUBMIT TIP') {
+        renderWhistleblowerSubmitForm(contentArea);
+        document.getElementById('moduleCount').innerText = 'Submit Confidential Tip';
+      } else if (activeTab === 'VERIFY TOKEN') {
+        renderWhistleblowerVerifyForm(contentArea);
+        document.getElementById('moduleCount').innerText = 'Cryptographic Verification';
+      } else {
+        await renderWhistleblowerLedger(contentArea);
+      }
+    }
+
+    // 1. Vault Ledger: Display all submitted disclosures with SHA-256 hashes
+    async function renderWhistleblowerLedger(container) {
+      try {
+        const list = await apiGet('/api/whistleblower/list');
+        const badge = document.getElementById('vaultCountBadge');
+        if (badge) badge.innerText = list.length;
+        document.getElementById('moduleCount').innerText = `${list.length} encrypted disclosures committed`;
+
+        if (list.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              No submissions committed to the vault yet.<br>
+              <button type="button" class="btn-submit" style="margin-top:12px;" onclick="setFilter('SUBMIT TIP')">Submit First Tip</button>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = `
+          <div style="margin-bottom: 16px; font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; flex-wrap: gap: 8px;">
+            <span>Public immutable ledger of submissions. Raw bodies are cryptographically encrypted at rest; public hashes and digests are displayed below for civil verification.</span>
+            <button type="button" class="btn-submit" style="padding: 6px 14px; font-size: 12px;" onclick="setFilter('SUBMIT TIP')">+ Submit New Tip</button>
+          </div>
+
+          <div class="card-grid">
+            ${list.map((item, idx) => `
+              <div class="card" onclick="openVaultDossier(${idx})">
+                <div class="card-thumb" style="height: 220px;">
+                  <div class="thumb-header">
+                    <span class="badge-pill risk">${item.status || 'ENCRYPTED AT REST'}</span>
+                    <span class="thumb-ref">${item.submission_id}</span>
+                  </div>
+                  <div class="thumb-main">
+                    <div class="thumb-figure-lbl">TARGET AGENCY</div>
+                    <div class="thumb-figure-val" style="font-size: 16px; word-break: break-word;">${escapeHtml(item.agency_targeted)}</div>
+                  </div>
+                  <div class="thumb-flags">${escapeHtml(item.description_digest || 'Confidential submission payload')}</div>
+                </div>
+                <div class="card-footer">
+                  <div class="card-title">${item.timestamp_utc ? item.timestamp_utc.slice(0, 10) : 'Recorded'} • ${escapeHtml(item.agency_targeted)}</div>
+                  <span class="card-action">
+                    Inspect
+                    <svg width="15" height="15" viewBox="0 0 256 256" fill="none">
+                      <line x1="64" y1="192" x2="192" y2="64" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"></line>
+                      <polyline points="88 64 192 64 192 168" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                    </svg>
+                  </span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+
+        window._vaultLedgerCache = list;
+      } catch (err) {
+        container.innerHTML = `<div class="empty-state" style="color:var(--accent);">Failed to load vault records: ${err.message}</div>`;
+      }
+    }
+
+    // Modal popup for individual vault submission
+    function openVaultDossier(idx) {
+      const list = window._vaultLedgerCache;
+      if (!list || !list[idx]) return;
+      const item = list[idx];
+
+      const modal = document.getElementById('dossierModal');
+      const metaRow = document.getElementById('modalMetaRow');
+      const title = document.getElementById('modalTitle');
+      const figLabel = document.getElementById('modalFigureLabel');
+      const figValue = document.getElementById('modalFigureValue');
+      const body = document.getElementById('modalBody');
+      const jsonBox = document.getElementById('modalJsonBox');
+
+      metaRow.innerHTML = `<span class="badge-pill risk">WHISTLEBLOWER VAULT</span> <span class="thumb-ref">${item.submission_id}</span>`;
+      title.innerText = `Leak Dossier: ${item.agency_targeted}`;
+      figLabel.innerText = 'STATUS & VERIFICATION';
+      figValue.innerText = item.status || 'ENCRYPTED_AT_REST';
+      
+      body.innerHTML = `
+        <div class="modal-field"><strong>Submission ID Token</strong> <code>${item.submission_id}</code></div>
+        <div class="modal-field"><strong>Timestamp (UTC)</strong> ${item.timestamp_utc || 'Recorded'}</div>
+        <div class="modal-field"><strong>Target Agency / LGU</strong> ${item.agency_targeted}</div>
+        <div class="modal-field"><strong>Public Summary Note / Digest</strong> ${escapeHtml(item.description_digest)}</div>
+        <div class="modal-field"><strong>SHA-256 Cryptographic Fingerprint</strong> <code style="word-break:break-all; font-size:11px;">${item.fingerprint_sha256}</code></div>
+        <div class="modal-field"><strong>Security Protocol</strong> Zero IP logging, GPG envelope emulation, memory encrypted before disk commit.</div>
+      `;
+
+      jsonBox.innerText = JSON.stringify(item, null, 2);
+      modal.classList.add('open');
+    }
+
+    // 2. Submit Tip View
+    function renderWhistleblowerSubmitForm(container) {
+      container.innerHTML = `
+        <div style="max-width: 680px;">
           <div style="border: 1px solid var(--border); padding: 28px; background: var(--card-bg); border-radius: 2px;">
             <div class="badge-pill risk" style="margin-bottom: 12px;">ONION-ROUTED ENCRYPTED DEAD-DROP</div>
             <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Submit Confidential Disclosures</h3>
             <p style="font-size: 13px; color: var(--muted); margin-bottom: 20px;">
-              Submissions are cryptographically hashed in memory and committed to an encrypted partition. No IP addresses, user agents, or network timestamps are stored.
+              Submissions are cryptographically hashed in memory and committed to an isolated partition. No IP addresses, user agents, or network timestamps are stored.
             </p>
 
             <form id="whistleForm" onsubmit="submitWhistleblower(event)">
               <div class="form-group">
                 <label class="form-label">Target Government Agency or LGU</label>
-                <input type="text" id="wAgency" class="form-input" placeholder="e.g. DPWH Bulacan 1st DEO, DepEd Central, LGU Cebu City" required>
+                <input type="text" id="wAgency" class="form-input" placeholder="e.g. DPWH Bulacan 1st DEO, DepEd Central, LGU Iligan City" required>
               </div>
 
               <div class="form-group">
-                <label class="form-label">Public Summary Context (Non-identifying)</label>
-                <input type="text" id="wNote" class="form-input" placeholder="e.g. Flood control kickbacks, ghost payroll, unliquidated vouchers">
+                <label class="form-label">Public Summary Context (Non-identifying summary shown in ledger)</label>
+                <input type="text" id="wNote" class="form-input" placeholder="e.g. Flood control kickbacks, unliquidated vouchers, ghost asphalt project">
               </div>
 
               <div class="form-group">
-                <label class="form-label">Confidential Forensic Evidence / Disclosures</label>
+                <label class="form-label">Confidential Forensic Evidence / Disclosures (Encrypted at rest)</label>
                 <textarea id="wBody" class="form-textarea" rows="6" placeholder="Paste unredacted voucher numbers, bank details, contractor ties, or whistleblowing disclosures..." required></textarea>
               </div>
 
@@ -1243,14 +1454,71 @@
         receipt.innerHTML = `
           <strong style="color: #000;">SUCCESS: EVIDENCE COMMITTED TO ENCRYPTED VAULT</strong><br><br>
           Submission ID: <strong>${data.submission_id}</strong><br>
-          SHA-256 Fingerprint: <code>${data.fingerprint_sha256}</code><br>
+          SHA-256 Fingerprint: <code style="word-break:break-all;">${data.fingerprint_sha256}</code><br>
           Status: <code>${data.status}</code><br><br>
-          <em>Zero IP logs recorded. Save your Submission ID to prove prior disclosure date.</em>
+          <em>Zero IP logs recorded. Save your Submission ID to prove prior disclosure date.</em><br><br>
+          <button type="button" class="btn-submit" style="padding:6px 14px; font-size:12px;" onclick="setFilter('VIEW SUBMISSIONS')">View in Vault Ledger →</button>
         `;
         document.getElementById('whistleForm').reset();
         loadStats();
       } catch (err) {
         receipt.innerHTML = `<span style="color:var(--accent);">Submission failed: ${err.message}</span>`;
+      }
+    }
+
+    // 3. Verify Token View: Look up Submission ID or Hash
+    function renderWhistleblowerVerifyForm(container) {
+      container.innerHTML = `
+        <div style="max-width: 680px;">
+          <div style="border: 1px solid var(--border); padding: 28px; background: var(--card-bg); border-radius: 2px;">
+            <div class="badge-pill" style="margin-bottom: 12px;">CRYPTOGRAPHIC VERIFICATION</div>
+            <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Verify Submission Token or SHA-256 Hash</h3>
+            <p style="font-size: 13px; color: var(--muted); margin-bottom: 20px;">
+              Enter your secret <strong>Submission ID</strong> (e.g. <code>LEAK-82AEC4995D76</code>) or <strong>SHA-256 fingerprint</strong> to verify that your disclosure was recorded in the immutable public ledger without revealing its underlying evidence.
+            </p>
+
+            <form onsubmit="verifyTokenSubmit(event)">
+              <div class="form-group">
+                <label class="form-label">Submission ID or SHA-256 Fingerprint</label>
+                <input type="text" id="verifyTokenInput" class="form-input" placeholder="e.g. LEAK-82AEC4995D76 or 058a04ee53fa44..." required>
+              </div>
+
+              <button type="submit" class="btn-submit">Verify Integrity &amp; Timestamp</button>
+            </form>
+
+            <div id="verifyResult" style="display:none;" class="receipt-box"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function verifyTokenSubmit(e) {
+      e.preventDefault();
+      const token = document.getElementById('verifyTokenInput').value.trim();
+      const resBox = document.getElementById('verifyResult');
+
+      resBox.style.display = 'block';
+      resBox.innerHTML = 'Verifying cryptographic token against vault ledger...';
+
+      try {
+        const res = await fetch('/api/whistleblower/verify/' + encodeURIComponent(token));
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || 'Token not found.');
+        }
+        const data = await res.json();
+        const r = data.record;
+        resBox.innerHTML = `
+          <strong style="color: #000;">VERIFIED: RECORD FOUND IN IMMUTABLE VAULT</strong><br><br>
+          Submission ID: <strong>${r.submission_id}</strong><br>
+          Timestamp: <strong>${r.timestamp_utc}</strong><br>
+          Agency Targeted: <strong>${escapeHtml(r.agency_targeted)}</strong><br>
+          Public Digest: <em>${escapeHtml(r.description_digest)}</em><br>
+          SHA-256 Fingerprint: <code style="word-break:break-all;">${r.fingerprint_sha256}</code><br>
+          Integrity Status: <code>${r.status}</code>
+        `;
+      } catch (err) {
+        resBox.innerHTML = `<span style="color:var(--accent);">Verification failed: ${err.message}</span>`;
       }
     }
 
