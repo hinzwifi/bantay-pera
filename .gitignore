@@ -6,4 +6,6 @@ data/caddy_config/
 .env
 .env.*
 !.env.example
+data/seedbox_storage/*.txt
+!data/seedbox_storage/.gitkeep
 

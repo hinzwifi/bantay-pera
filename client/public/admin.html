@@ -1164,8 +1164,13 @@
             <td><strong>${escapeHtml(t.size_human || 'N/A')}</strong></td>
             <td><code style="font-size:11px; user-select:all;" title="${escapeHtml(t.sha3_512)}">${escapeHtml(shortSha)}</code></td>
             <td><code style="font-size:11px; user-select:all;" title="${escapeHtml(t.info_hash)}">${escapeHtml(shortHash)}</code></td>
-            <td><span class="status-badge status-approved">Seeding (${t.seeders_on_1gbps_node || 1})</span></td>
-            <td><button class="btn-secondary" onclick="copyMagnet('${escapeHtml(t.magnet)}')">Copy Magnet</button></td>
+            <td>
+              <div style="display:flex; gap:4px;">
+                <a href="${t.torrent_file_url || '/api/torrents/file/' + t.info_hash + '.torrent'}" download class="btn-secondary" style="text-decoration:none;">.torrent</a>
+                <a href="${t.direct_download_url || '/api/torrents/download/' + t.info_hash}" download class="btn-secondary" style="text-decoration:none;">Direct</a>
+                <button class="btn-secondary" onclick="copyMagnet('${escapeHtml(t.magnet)}')">Magnet</button>
+              </div>
+            </td>
           </tr>
         `;
       }).join('');

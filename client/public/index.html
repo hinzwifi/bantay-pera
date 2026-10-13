@@ -1677,34 +1677,45 @@
           </div>
         `;
 
-        const cardsHtml = list.map(t => `
-          <div class="card" onclick="copyMagnet('${t.magnet}')">
-            <div class="card-thumb" style="height: 240px;">
-              <div class="thumb-header">
-                <span class="badge-pill">1GBPS ACTIVE SEED</span>
-                <span class="thumb-ref">${t.size_human}</span>
+        const cardsHtml = list.map(t => {
+          const torrentUrl = t.torrent_file_url || `/api/torrents/file/${t.info_hash}.torrent`;
+          const downloadUrl = t.direct_download_url || `/api/torrents/download/${t.info_hash}`;
+
+          return `
+            <div class="card" style="display:flex; flex-direction:column; justify-content:space-between;">
+              <div class="card-thumb" style="height: auto; padding-bottom: 16px;">
+                <div class="thumb-header">
+                  <span class="badge-pill" style="color:#15803d; border-color:#86efac;">1GBPS ACTIVE SEED</span>
+                  <span class="thumb-ref">${t.size_human}</span>
+                </div>
+                <div class="thumb-main" style="margin-top:10px;">
+                  <div class="thumb-figure-lbl">PEER ARCHIVE</div>
+                  <div class="thumb-figure-val" style="font-size:14px; word-break:break-all; font-weight:600;">${escapeHtml(t.name)}</div>
+                </div>
+                <div class="thumb-flags" style="font-family:var(--font-mono); font-size:11px; margin-top:10px; line-height:1.6;">
+                  <div><strong>Info-Hash:</strong> <code>${t.info_hash}</code></div>
+                  <div style="color:var(--muted); font-size:10px; word-break:break-all; margin-top:2px;">
+                    <strong>SHA3-512:</strong> ${(t.sha3_512 || '').slice(0, 32)}...
+                  </div>
+                  <div style="margin-top:6px; font-size:10px; color:#15803d;">
+                    ● BEP 19 WebSeed &amp; Public Trackers Active
+                  </div>
+                </div>
               </div>
-              <div class="thumb-main">
-                <div class="thumb-figure-lbl">PEER ARCHIVE</div>
-                <div class="thumb-figure-val" style="font-size:15px; word-break:break-all;">${escapeHtml(t.name)}</div>
-              </div>
-              <div class="thumb-flags" style="font-family:var(--font-mono); font-size:11px;">
-                Info-Hash: ${t.info_hash}<br>
-                <span style="color:var(--muted); font-size:10px;">SHA3-512: ${(t.sha3_512 || '').slice(0, 24)}...</span>
+              <div class="card-footer" style="display:flex; gap:6px; padding:12px; border-top:1px solid var(--border); flex-wrap:wrap; background:rgba(0,0,0,0.015);">
+                <a href="${torrentUrl}" download style="flex:1; text-align:center; padding:6px 8px; font-size:11px; font-weight:600; text-decoration:none; background:#000; color:#fff; border-radius:2px;">
+                  .torrent
+                </a>
+                <a href="${downloadUrl}" download style="flex:1; text-align:center; padding:6px 8px; font-size:11px; font-weight:600; text-decoration:none; background:none; border:1px solid var(--border); color:var(--text); border-radius:2px;">
+                  Direct File
+                </a>
+                <button type="button" onclick="copyMagnet('${t.magnet}')" style="flex:1; text-align:center; padding:6px 8px; font-size:11px; font-weight:600; background:none; border:1px solid var(--border); color:var(--text); cursor:pointer; border-radius:2px;">
+                  Magnet
+                </button>
               </div>
             </div>
-            <div class="card-footer">
-              <div class="card-title">Click to copy Magnet URI</div>
-              <span class="card-action">
-                Copy Magnet
-                <svg width="15" height="15" viewBox="0 0 256 256" fill="none">
-                  <line x1="64" y1="192" x2="192" y2="64" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"></line>
-                  <polyline points="88 64 192 64 192 168" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"></polyline>
-                </svg>
-              </span>
-            </div>
-          </div>
-        `).join('');
+          `;
+        }).join('');
 
         grid.innerHTML = dropBoxHtml + cardsHtml;
       } catch (err) {
