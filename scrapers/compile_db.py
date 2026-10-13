@@ -112,15 +112,48 @@ def init_db():
         most_common_denial_ground TEXT
     )''')
 
-    # 7. Whistleblower Vault Table (Encrypted submissions metadata)
+    # 7. Whistleblower Vault Table (Quantum-Resistant Hash Integrity)
     cur.execute('''
     CREATE TABLE IF NOT EXISTS whistleblower_vault (
         submission_id TEXT PRIMARY KEY,
-        timestamp_utc TEXT,
-        agency_targeted TEXT,
-        description_digest TEXT,
-        encrypted_payload_hash TEXT,
-        verification_status TEXT
+        timestamp_utc TEXT NOT NULL,
+        agency_targeted TEXT NOT NULL,
+        description_digest TEXT NOT NULL,
+        hash_sha3_512 TEXT NOT NULL,
+        hash_blake2b TEXT NOT NULL,
+        legacy_hash_sha256 TEXT NOT NULL,
+        verification_status TEXT NOT NULL
+    )''')
+
+    # 8. Whistleblower Staging Quarantine Queue (Zero Public Seeding without Admin Audit)
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS staging_queue (
+        id TEXT PRIMARY KEY,
+        timestamp_utc TEXT NOT NULL,
+        agency_targeted TEXT NOT NULL,
+        public_note TEXT,
+        file_name TEXT,
+        file_size_bytes INTEGER DEFAULT 0,
+        mime_type TEXT,
+        status TEXT DEFAULT 'PENDING_REVIEW',
+        rejection_reason TEXT,
+        hash_sha3_512 TEXT NOT NULL,
+        hash_blake2b TEXT NOT NULL,
+        hash_sha256 TEXT NOT NULL,
+        raw_payload_encrypted TEXT
+    )''')
+
+    # 9. Public BitTorrent Archive
+    cur.execute('''
+    CREATE TABLE IF NOT EXISTS public_torrents (
+        info_hash TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        size_bytes INTEGER NOT NULL,
+        size_human TEXT NOT NULL,
+        magnet TEXT NOT NULL,
+        sha3_512 TEXT NOT NULL,
+        seeders_on_1gbps_node INTEGER DEFAULT 1,
+        published_date TEXT NOT NULL
     )''')
 
     # Full Text Search Virtual Tables (SQLite FTS5)

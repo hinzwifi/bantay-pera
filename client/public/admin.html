@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bantay-Pera Admin — Seedbox &amp; Quarantine Curator Portal</title>
+  <meta name="description" content="Curatorial admin console for Bantay-Pera. Gatekeeper against spam, malware, and abuse before public 500GB BitTorrent seeding. Quantum-hardened SHA3-512 and BLAKE2b validation.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --bg: #ffffff;
+      --text: #000000;
+      --muted: rgba(0, 0, 0, 0.45);
+      --subtle: rgba(0, 0, 0, 0.25);
+      --border: rgba(0, 0, 0, 0.1);
+      --card-bg: rgba(0, 0, 0, 0.025);
+      --card-hover: rgba(0, 0, 0, 0.05);
+      --accent: #b91c1c;
+      --success: #15803d;
+      --warning: #b45309;
+      --badge-bg: #ffffff;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      line-height: 1.5;
+    }
+
+    .app-layout {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+    }
+
+    aside {
+      width: 100%;
+      background: #ffffff;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .main-content {
+      width: 100%;
+      padding: 24px;
+    }
+
+    @media (min-width: 768px) {
+      .app-layout {
+        flex-direction: row;
+      }
+      aside {
+        width: 340px;
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+        border-right: 1px solid var(--border);
+        border-bottom: none;
+        padding: 32px;
+      }
+      .main-content {
+        margin-left: 340px;
+        padding: 32px;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      aside {
+        width: 380px;
+        padding: 36px;
+      }
+      .main-content {
+        margin-left: 380px;
+        padding: 40px;
+      }
+    }
+
+    .brand-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--accent);
+      margin-top: 3px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    .top-nav {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+      font-size: 13px;
+    }
+
+    .top-nav a, .top-nav button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+
+    .top-nav a:hover, .top-nav button:hover {
+      color: #000000;
+    }
+
+    .aside-body {
+      flex: 1;
+    }
+
+    .intro-p {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.55;
+      margin-bottom: 20px;
+    }
+
+    .metrics-panel {
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: 4px;
+      margin-bottom: 24px;
+      font-size: 12px;
+    }
+
+    .metrics-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .metrics-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .metrics-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .metrics-label {
+      color: var(--muted);
+    }
+
+    .metrics-val {
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    .storage-bar-outer {
+      width: 100%;
+      height: 6px;
+      background: rgba(0, 0, 0, 0.08);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+
+    .storage-bar-inner {
+      height: 100%;
+      background: #000000;
+      width: 9.6%; /* 48GB / 500GB */
+    }
+
+    .nav-section-title {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .module-nav {
+      list-style: none;
+      margin-bottom: 24px;
+    }
+
+    .module-nav li {
+      margin-bottom: 4px;
+    }
+
+    .module-nav-btn {
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      padding: 6px 8px;
+      border-radius: 3px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.15s ease;
+    }
+
+    .module-nav-btn:hover {
+      background: var(--card-bg);
+      color: #000000;
+    }
+
+    .module-nav-btn.active {
+      background: #000000;
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .badge-counter {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 1px 6px;
+      background: rgba(0, 0, 0, 0.06);
+      border-radius: 10px;
+    }
+
+    .module-nav-btn.active .badge-counter {
+      background: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+    }
+
+    /* Main Content Header */
+    .content-header {
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+
+    .view-title {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .view-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* Auth Screen */
+    .auth-card {
+      max-width: 480px;
+      margin: 40px auto;
+      border: 1px solid var(--border);
+      padding: 32px;
+      background: #ffffff;
+    }
+
+    .auth-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .auth-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-family: var(--font-mono);
+      border: 1px solid var(--border);
+      outline: none;
+      border-radius: 2px;
+      transition: border-color 0.15s ease;
+    }
+
+    .form-input:focus {
+      border-color: #000000;
+    }
+
+    .btn-primary {
+      display: inline-block;
+      width: 100%;
+      padding: 10px 16px;
+      background: #000000;
+      color: #ffffff;
+      border: none;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      border-radius: 2px;
+      transition: opacity 0.15s ease;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.85;
+    }
+
+    .btn-secondary {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      border-radius: 2px;
+      font-family: inherit;
+    }
+
+    .btn-secondary:hover {
+      background: var(--card-bg);
+      border-color: #000000;
+    }
+
+    .btn-danger {
+      background: none;
+      border: 1px solid rgba(185, 28, 28, 0.3);
+      color: var(--accent);
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      border-radius: 2px;
+      font-family: inherit;
+    }
+
+    .btn-danger:hover {
+      background: rgba(185, 28, 28, 0.06);
+      border-color: var(--accent);
+    }
+
+    .btn-success {
+      background: #000000;
+      color: #ffffff;
+      border: none;
+      padding: 6px 14px;
+      font-size: 12px;
+      cursor: pointer;
+      border-radius: 2px;
+      font-family: inherit;
+      font-weight: 500;
+    }
+
+    .btn-success:hover {
+      background: var(--success);
+    }
+
+    /* Staging Queue Cards / Items */
+    .item-card {
+      border: 1px solid var(--border);
+      background: #ffffff;
+      padding: 20px;
+      margin-bottom: 16px;
+      border-radius: 3px;
+      transition: border-color 0.15s ease;
+    }
+
+    .item-card:hover {
+      border-color: rgba(0, 0, 0, 0.25);
+    }
+
+    .item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .item-id {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .status-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 2px;
+      letter-spacing: 0.05em;
+    }
+
+    .status-pending {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+
+    .status-approved {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .status-rejected {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    .item-agency {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .item-note {
+      font-size: 13px;
+      color: var(--text);
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+
+    .crypto-hashes {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: 2px;
+      margin-bottom: 16px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+    }
+
+    .crypto-line {
+      display: flex;
+      align-items: baseline;
+      margin-bottom: 6px;
+      word-break: break-all;
+    }
+
+    .crypto-line:last-child {
+      margin-bottom: 0;
+    }
+
+    .crypto-label {
+      width: 120px;
+      flex-shrink: 0;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .crypto-val {
+      color: var(--text);
+      user-select: all;
+    }
+
+    .payload-preview {
+      background: rgba(0, 0, 0, 0.02);
+      border-left: 2px solid #000000;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      margin-bottom: 16px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 140px;
+      overflow-y: auto;
+    }
+
+    .item-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Torrents Table */
+    .table-container {
+      border: 1px solid var(--border);
+      overflow-x: auto;
+      background: #ffffff;
+      border-radius: 3px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    th {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      padding: 12px 16px;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: rgba(0, 0, 0, 0.015);
+    }
+
+    .table-title {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 3px;
+    }
+
+    .table-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .empty-state {
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      border: 1px dashed var(--border);
+      border-radius: 3px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      background: #000000;
+      color: #ffffff;
+      font-size: 13px;
+      border-radius: 3px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.2s ease;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Explainer Box */
+    .security-notice {
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      padding: 18px;
+      border-radius: 4px;
+      margin-top: 32px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .security-notice h4 {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .security-notice p {
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .security-notice p:last-child {
+      margin-bottom: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <aside>
+      <div class="brand-header">
+        <div>
+          <div class="brand-title">BANTAY-PERA</div>
+          <div class="brand-sub">SEEDBOX &amp; CURATOR ADMIN</div>
+        </div>
+        <nav class="top-nav">
+          <a href="/">← Public Site</a>
+          <button type="button" id="logoutBtn" onclick="handleLogout()" style="display:none;">Sign Out</button>
+        </nav>
+      </div>
+
+      <div class="aside-body">
+        <p class="intro-p">
+          Dedicated air-gapped curatorial console. Quarantines whistleblower submissions, enforces SHA3-512 &amp; BLAKE2b verification, and approves legitimate civic datasets before seeding to the 500GB public BitTorrent swarm.
+        </p>
+
+        <div class="metrics-panel">
+          <div class="metrics-title">
+            <span>500GB Seedbox Node</span>
+            <span style="color:var(--success);">● 1Gbps Fiber</span>
+          </div>
+          <div class="metrics-row">
+            <span class="metrics-label">Total Allocated Disk:</span>
+            <span class="metrics-val">500.0 GB</span>
+          </div>
+          <div class="metrics-row">
+            <span class="metrics-label">Active Seed Swarms:</span>
+            <span class="metrics-val" id="asideSeedingSize">48.0 GB</span>
+          </div>
+          <div class="metrics-row">
+            <span class="metrics-label">Available Headroom:</span>
+            <span class="metrics-val" id="asideFreeSpace">452.0 GB</span>
+          </div>
+          <div class="storage-bar-outer">
+            <div class="storage-bar-inner" id="storageBar"></div>
+          </div>
+          <div class="metrics-row">
+            <span class="metrics-label">Quantum Digest:</span>
+            <span class="metrics-val" style="color:var(--success);">FIPS 202 Keccak</span>
+          </div>
+        </div>
+
+        <div class="nav-section-title">Curatorial Queue</div>
+        <ul class="module-nav" id="adminNav" style="display:none;">
+          <li>
+            <button class="module-nav-btn active" onclick="switchView('staging')">
+              <span>Quarantine Review</span>
+              <span class="badge-counter" id="navPendingCount">0</span>
+            </button>
+          </li>
+          <li>
+            <button class="module-nav-btn" onclick="switchView('torrents')">
+              <span>Public BitTorrent Swarm</span>
+              <span class="badge-counter" id="navTorrentsCount">0</span>
+            </button>
+          </li>
+        </ul>
+
+        <div class="security-notice">
+          <h4>Air-Gap Quarantine Rationale</h4>
+          <p>
+            Zero uncurated public seeding. Without this air-gap, adversaries could flood the 500GB hard drive with spam, malware, or illicit non-civic payloads.
+          </p>
+          <p>
+            Once you click <strong>Approve</strong>, the cryptographic package is packaged into `.tar.zst`, assigned a BitTorrent info-hash, and joined to the 1Gbps high-speed public seed swarms.
+          </p>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <!-- Unauthenticated View -->
+      <section id="authSection" class="auth-card">
+        <h2 class="auth-title">Curator Authentication Required</h2>
+        <p class="auth-desc">
+          Enter your civic administrator bearer token to manage the 500GB seedbox quarantine queue and approve cryptographic releases.
+        </p>
+        <form onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label class="form-label" for="adminTokenInput">Admin Bearer Token</label>
+            <input type="password" id="adminTokenInput" class="form-input" placeholder="bantay-curator-secret-key-..." required autofocus>
+          </div>
+          <button type="submit" class="btn-primary">Unlock Curatorial Console</button>
+        </form>
+      </section>
+
+      <!-- Authenticated Content Area -->
+      <div id="curatorSection" style="display:none;">
+        <header class="content-header">
+          <div class="header-top-row">
+            <h1 class="view-title" id="viewHeaderTitle">Quarantine Review Queue</h1>
+            <button class="btn-secondary" onclick="refreshCurrentView()">↻ Refresh</button>
+          </div>
+          <p class="view-desc" id="viewHeaderDesc">
+            Inspecting raw submissions held in the quarantine air-gap. Verify authenticity before signing for public BitTorrent broadcast.
+          </p>
+        </header>
+
+        <!-- Staging Quarantine View -->
+        <section id="stagingView">
+          <div id="stagingCardsList"></div>
+        </section>
+
+        <!-- Public BitTorrent Torrents View -->
+        <section id="torrentsView" style="display:none;">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Archive Dataset</th>
+                  <th>Size</th>
+                  <th>SHA3-512 Signature</th>
+                  <th>Info-Hash</th>
+                  <th>Swarm</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="torrentsTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // State management
+    const state = {
+      token: sessionStorage.getItem('bantay_admin_token') || '',
+      currentView: 'staging',
+      stagingData: [],
+      torrentsData: []
+    };
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    async function apiRequest(path, method = 'GET', body = null) {
+      const headers = {
+        'Accept': 'application/json'
+      };
+      if (state.token) {
+        headers['Authorization'] = 'Bearer ' + state.token;
+      }
+      if (body) {
+        headers['Content-Type'] = 'application/json';
+      }
+
+      const res = await fetch(path, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : null
+      });
+
+      if (res.status === 401) {
+        sessionStorage.removeItem('bantay_admin_token');
+        state.token = '';
+        renderAuthState();
+        throw new Error('Unauthorized: Invalid or expired admin token.');
+      }
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Request failed with status ' + res.status);
+      }
+      return data;
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const val = document.getElementById('adminTokenInput').value.trim();
+      if (!val) return;
+      state.token = val;
+      sessionStorage.setItem('bantay_admin_token', val);
+      initAdminSession();
+    }
+
+    function handleLogout() {
+      sessionStorage.removeItem('bantay_admin_token');
+      state.token = '';
+      renderAuthState();
+      showToast('Logged out of curatorial session.');
+    }
+
+    function renderAuthState() {
+      const isAuthed = !!state.token;
+      document.getElementById('authSection').style.display = isAuthed ? 'none' : 'block';
+      document.getElementById('curatorSection').style.display = isAuthed ? 'block' : 'none';
+      document.getElementById('adminNav').style.display = isAuthed ? 'block' : 'none';
+      document.getElementById('logoutBtn').style.display = isAuthed ? 'inline-block' : 'none';
+    }
+
+    async function initAdminSession() {
+      renderAuthState();
+      if (!state.token) return;
+
+      try {
+        await Promise.all([loadStagingQueue(), loadTorrents()]);
+        showToast('Curatorial session authenticated.');
+      } catch (err) {
+        showToast(err.message);
+      }
+    }
+
+    function switchView(viewName) {
+      state.currentView = viewName;
+      const navButtons = document.querySelectorAll('.module-nav-btn');
+      navButtons[0].classList.toggle('active', viewName === 'staging');
+      navButtons[1].classList.toggle('active', viewName === 'torrents');
+
+      document.getElementById('stagingView').style.display = viewName === 'staging' ? 'block' : 'none';
+      document.getElementById('torrentsView').style.display = viewName === 'torrents' ? 'block' : 'none';
+
+      if (viewName === 'staging') {
+        document.getElementById('viewHeaderTitle').innerText = 'Quarantine Review Queue';
+        document.getElementById('viewHeaderDesc').innerText = 'Inspecting raw submissions held in the quarantine air-gap. Verify authenticity before signing for public BitTorrent broadcast.';
+      } else {
+        document.getElementById('viewHeaderTitle').innerText = 'Curated 500GB Public BitTorrent Swarm';
+        document.getElementById('viewHeaderDesc').innerText = 'Active civic forensics seeded on the 1Gbps high-speed fiber server. Fully authenticated against SHA3-512 hashes.';
+      }
+    }
+
+    async function refreshCurrentView() {
+      try {
+        if (state.currentView === 'staging') {
+          await loadStagingQueue();
+          showToast('Quarantine review queue updated.');
+        } else {
+          await loadTorrents();
+          showToast('Public BitTorrent swarm updated.');
+        }
+      } catch (err) {
+        showToast('Refresh failed: ' + err.message);
+      }
+    }
+
+    async function loadStagingQueue() {
+      const data = await apiRequest('/api/admin/staging');
+      state.stagingData = data;
+      renderStagingList();
+      updateMetrics();
+    }
+
+    async function loadTorrents() {
+      const data = await apiRequest('/api/torrents');
+      state.torrentsData = data;
+      renderTorrentsTable();
+      updateMetrics();
+    }
+
+    function updateMetrics() {
+      const pending = state.stagingData.filter(s => s.status === 'PENDING_REVIEW').length;
+      document.getElementById('navPendingCount').innerText = pending;
+      document.getElementById('navTorrentsCount').innerText = state.torrentsData.length;
+
+      // Calculate storage
+      let seededBytes = 0;
+      state.torrentsData.forEach(t => {
+        seededBytes += (t.size_bytes || 0);
+      });
+      const seededGb = (seededBytes / (1024 * 1024 * 1024)).toFixed(1);
+      const freeGb = (500 - parseFloat(seededGb)).toFixed(1);
+      const pct = Math.min(100, (parseFloat(seededGb) / 500) * 100).toFixed(1);
+
+      document.getElementById('asideSeedingSize').innerText = `${seededGb} GB`;
+      document.getElementById('asideFreeSpace').innerText = `${freeGb} GB`;
+      document.getElementById('storageBar').style.width = `${pct}%`;
+    }
+
+    function renderStagingList() {
+      const container = document.getElementById('stagingCardsList');
+      if (!state.stagingData || state.stagingData.length === 0) {
+        container.innerHTML = '<div class="empty-state">No quarantined submissions found in staging air-gap.</div>';
+        return;
+      }
+
+      container.innerHTML = state.stagingData.map(item => {
+        const isPending = item.status === 'PENDING_REVIEW';
+        const isApproved = item.status === 'APPROVED';
+        const isRejected = item.status === 'REJECTED';
+
+        let badgeClass = 'status-pending';
+        if (isApproved) badgeClass = 'status-approved';
+        if (isRejected) badgeClass = 'status-rejected';
+
+        const sizeKb = item.file_size_bytes ? (item.file_size_bytes / 1024).toFixed(1) + ' KB' : 'N/A';
+
+        return `
+          <div class="item-card" id="card-${escapeHtml(item.id)}">
+            <div class="item-top">
+              <div>
+                <span class="item-id">${escapeHtml(item.id)}</span>
+                <span style="font-size:12px; color:var(--muted); margin-left:8px;">${new Date(item.timestamp_utc).toLocaleString()}</span>
+              </div>
+              <span class="status-badge ${badgeClass}">${escapeHtml(item.status)}</span>
+            </div>
+
+            <div class="item-agency">${escapeHtml(item.agency_targeted)}</div>
+            <div class="item-note"><strong>Public Summary:</strong> ${escapeHtml(item.public_note || 'No notes provided.')}</div>
+
+            <div class="crypto-hashes">
+              <div class="crypto-line">
+                <span class="crypto-label">SHA3-512:</span>
+                <span class="crypto-val" title="${escapeHtml(item.hash_sha3_512)}">${escapeHtml(item.hash_sha3_512)}</span>
+              </div>
+              <div class="crypto-line">
+                <span class="crypto-label">BLAKE2b:</span>
+                <span class="crypto-val" title="${escapeHtml(item.hash_blake2b)}">${escapeHtml(item.hash_blake2b)}</span>
+              </div>
+              <div class="crypto-line">
+                <span class="crypto-label">Payload Size:</span>
+                <span class="crypto-val">${sizeKb} (${escapeHtml(item.file_name || 'document')})</span>
+              </div>
+            </div>
+
+            ${item.raw_payload_encrypted ? `
+              <div style="font-size:11px; font-weight:600; text-transform:uppercase; color:var(--muted); margin-bottom:4px;">
+                Quarantined Body (Curator Decrypted Inspection):
+              </div>
+              <div class="payload-preview">${escapeHtml(item.raw_payload_encrypted)}</div>
+            ` : ''}
+
+            ${item.rejection_reason ? `
+              <div style="font-size:12px; color:var(--accent); margin-bottom:12px;">
+                <strong>Rejection Reason:</strong> ${escapeHtml(item.rejection_reason)}
+              </div>
+            ` : ''}
+
+            <div class="item-actions">
+              ${isPending ? `
+                <button class="btn-danger" onclick="rejectItem('${escapeHtml(item.id)}')">Reject as Spam</button>
+                <button class="btn-success" onclick="approveItem('${escapeHtml(item.id)}')">Approve &amp; Seed on BitTorrent</button>
+              ` : `
+                <span style="font-size:12px; color:var(--muted);">
+                  ${isApproved ? '✓ Seeded into Public P2P Swarm' : '✕ Quarantined and Purged from Swarm'}
+                </span>
+              `}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderTorrentsTable() {
+      const tbody = document.getElementById('torrentsTableBody');
+      if (!state.torrentsData || state.torrentsData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No active BitTorrent archives currently seeded.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = state.torrentsData.map(t => {
+        const shortSha = t.sha3_512 ? t.sha3_512.substring(0, 16) + '...' : 'N/A';
+        const shortHash = t.info_hash ? t.info_hash.substring(0, 16) + '...' : 'N/A';
+
+        return `
+          <tr>
+            <td>
+              <div class="table-title">${escapeHtml(t.name)}</div>
+              <div class="table-sub">Released: ${escapeHtml(t.published_date || '2026-10')}</div>
+            </td>
+            <td><strong>${escapeHtml(t.size_human || 'N/A')}</strong></td>
+            <td>
+              <code style="font-size:11px; user-select:all;" title="${escapeHtml(t.sha3_512)}">${escapeHtml(shortSha)}</code>
+            </td>
+            <td>
+              <code style="font-size:11px; user-select:all;" title="${escapeHtml(t.info_hash)}">${escapeHtml(shortHash)}</code>
+            </td>
+            <td>
+              <span class="status-badge status-approved">Seeding (${t.seeders_on_1gbps_node || 1})</span>
+            </td>
+            <td>
+              <button class="btn-secondary" onclick="copyMagnet('${escapeHtml(t.magnet)}')">Copy Magnet</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function approveItem(id) {
+      if (!confirm('Are you sure you want to approve submission ' + id + '?\n\nThis will compute a BitTorrent info-hash, sign the SHA3-512 archive, and initiate live seeding on the 500GB volume.')) {
+        return;
+      }
+
+      try {
+        const res = await apiRequest(`/api/admin/approve/${id}`, 'POST');
+        showToast('Approved! Released into public BitTorrent swarm.');
+        await Promise.all([loadStagingQueue(), loadTorrents()]);
+      } catch (err) {
+        alert('Approval failed: ' + err.message);
+      }
+    }
+
+    async function rejectItem(id) {
+      const reason = prompt('Enter audit rejection reason (e.g. "Spam / Non-civic upload / Malicious payload"):', 'Non-civic / spam / unverified content');
+      if (reason === null) return;
+
+      try {
+        await apiRequest(`/api/admin/reject/${id}`, 'POST', { reason });
+        showToast('Upload rejected and isolated from seedbox.');
+        await loadStagingQueue();
+      } catch (err) {
+        alert('Rejection failed: ' + err.message);
+      }
+    }
+
+    function copyMagnet(uri) {
+      navigator.clipboard.writeText(uri).then(() => {
+        showToast('Magnet link copied to clipboard.');
+      }).catch(() => {
+        prompt('Copy magnet link:', uri);
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Auto-init if token present
+    if (state.token) {
+      initAdminSession();
+    } else {
+      renderAuthState();
+    }
+  </script>
+</body>
+</html>

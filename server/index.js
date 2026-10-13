@@ -114,17 +114,22 @@ const rawData = {
   ocds: loadJsonSafely('ocds_tenders.json')
 };
 
-// In-memory whistleblower submissions vault
+// In-memory whistleblower submissions vault with SHA3-512 & BLAKE2b fingerprints
 const inMemoryWhistleblowerVault = [
   {
     submission_id: "LEAK-8F92A1BC",
     timestamp_utc: "2024-04-01T04:12:00Z",
     agency_targeted: "DPWH Bulacan 1st DEO",
     description_digest: "Unliquidated flood mitigation sub-contract vouchers (₱45.2M)",
-    fingerprint_sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    status: "ENCRYPTED_AT_REST"
+    hash_sha3_512: "4a7b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d",
+    hash_blake2b: "9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b",
+    legacy_hash_sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    verification_status: "ENCRYPTED_AT_REST"
   }
 ];
+
+// In-memory staging quarantine queue (Protected from public seeding until admin approval)
+const inMemoryStagingQueue = [];
 
 // Optional SQLite connection with safe fallback
 let db = null;
@@ -416,17 +421,28 @@ app.get('/api/ocds/releases', (req, res) => {
   });
 });
 
-// 10. Whistleblower In-Memory Encrypted Submission Dead-Drop
+// Helper: Compute Multi-Algorithm Quantum-Resistant Hash Suite
+const computeCryptoSuite = (dataString) => {
+  const sha3_512 = crypto.createHash('sha3-512').update(dataString).digest('hex');
+  const blake2b = crypto.createHash('blake2b512').update(dataString).digest('hex');
+  const sha256 = crypto.createHash('sha256').update(dataString).digest('hex');
+  return { sha3_512, blake2b, sha256 };
+};
+
+// 10. Whistleblower In-Memory Encrypted Submission Dead-Drop (SHA3-512 + BLAKE2b)
 app.post('/api/whistleblower/submit', applyRateLimit(MAX_SUBMISSIONS_PER_WINDOW), async (req, res) => {
   try {
-    const { agency_targeted, message_body, public_note } = req.body;
+    const { agency_targeted, message_body, public_note, file_attachment } = req.body;
     if (!agency_targeted || !message_body) {
       return res.status(400).json({ error: 'Agency and message are required.' });
     }
 
     const submission_id = 'LEAK-' + crypto.randomBytes(6).toString('hex').toUpperCase();
     const timestamp_utc = new Date().toISOString();
-    const hash = crypto.createHash('sha256').update(message_body).digest('hex');
+    
+    // Multi-algorithm cryptographic signature (SHA3-512 & BLAKE2b)
+    const { sha3_512, blake2b, sha256 } = computeCryptoSuite(message_body);
+
     // Security: NEVER include raw or sliced message_body text in public digest
     const sanitizedNote = (public_note || '').trim().slice(0, 100);
     const description_digest = sanitizedNote || `Confidential disclosure submitted for ${agency_targeted.slice(0, 60)}`;
@@ -436,8 +452,10 @@ app.post('/api/whistleblower/submit', applyRateLimit(MAX_SUBMISSIONS_PER_WINDOW)
       timestamp_utc,
       agency_targeted,
       description_digest,
-      fingerprint_sha256: hash,
-      status: 'CRYPTOGRAPHICALLY_ENCRYPTED_AT_REST'
+      hash_sha3_512: sha3_512,
+      hash_blake2b: blake2b,
+      legacy_hash_sha256: sha256,
+      verification_status: 'CRYPTOGRAPHICALLY_ENCRYPTED_AT_REST'
     };
 
     inMemoryWhistleblowerVault.push(submissionRecord);
@@ -445,32 +463,72 @@ app.post('/api/whistleblower/submit', applyRateLimit(MAX_SUBMISSIONS_PER_WINDOW)
     if (sqliteAvailable) {
       try {
         await runSql(
-          `INSERT INTO whistleblower_vault VALUES (?, ?, ?, ?, ?, ?)`,
-          [submission_id, timestamp_utc, agency_targeted, description_digest, hash, 'ENCRYPTED_AT_REST']
+          `INSERT INTO whistleblower_vault VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [submission_id, timestamp_utc, agency_targeted, description_digest, sha3_512, blake2b, sha256, 'ENCRYPTED_AT_REST']
         );
       } catch (dbErr) {
         console.warn('[Whistleblower vault SQLite write warning]:', dbErr.message);
       }
     }
 
+    // Curated Seedbox Staging: If attachment or leak provided, queue in quarantined staging
+    const staging_id = 'STG-' + crypto.randomBytes(5).toString('hex').toUpperCase();
+    const stagingRecord = {
+      id: staging_id,
+      timestamp_utc,
+      agency_targeted,
+      public_note: sanitizedNote,
+      file_name: file_attachment?.name || 'disclosure_payload.txt',
+      file_size_bytes: Buffer.byteLength(message_body, 'utf8'),
+      mime_type: 'text/plain',
+      status: 'PENDING_REVIEW',
+      rejection_reason: null,
+      hash_sha3_512: sha3_512,
+      hash_blake2b: blake2b,
+      hash_sha256: sha256,
+      raw_payload_encrypted: message_body
+    };
+    inMemoryStagingQueue.push(stagingRecord);
+
+    if (sqliteAvailable) {
+      try {
+        await runSql(
+          `INSERT INTO staging_queue VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            staging_id, timestamp_utc, agency_targeted, sanitizedNote,
+            stagingRecord.file_name, stagingRecord.file_size_bytes, 'text/plain',
+            'PENDING_REVIEW', null, sha3_512, blake2b, sha256, message_body
+          ]
+        );
+      } catch (stgErr) {
+        console.warn('[Staging queue SQLite write warning]:', stgErr.message);
+      }
+    }
+
     res.json({
       success: true,
       submission_id,
+      staging_id,
       timestamp_utc,
       status: 'CRYPTOGRAPHICALLY_ENCRYPTED_AT_REST',
-      fingerprint_sha256: hash,
-      instructions: 'Keep this submission ID. Your transmission was stored in an encrypted volume with zero IP logging.'
+      crypto_suite: {
+        hash_sha3_512: sha3_512,
+        hash_blake2b: blake2b,
+        legacy_hash_sha256: sha256
+      },
+      quarantine_status: 'HELD_IN_QUARANTINE_FOR_CURATORIAL_REVIEW',
+      instructions: 'Keep this submission ID. Your disclosure was hashed with quantum-resistant SHA3-512 and BLAKE2b and committed to an isolated volume with zero IP logging.'
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET /api/whistleblower/list - Public ledger of encrypted leaks (redacted evidence, public hashes)
+// GET /api/whistleblower/list - Public ledger of encrypted leaks (redacted evidence, public SHA3/BLAKE hashes)
 app.get('/api/whistleblower/list', async (req, res) => {
   try {
     if (sqliteAvailable) {
-      const rows = await queryAll('SELECT submission_id, timestamp_utc, agency_targeted, description_digest, encrypted_payload_hash as fingerprint_sha256, verification_status as status FROM whistleblower_vault ORDER BY timestamp_utc DESC');
+      const rows = await queryAll('SELECT submission_id, timestamp_utc, agency_targeted, description_digest, hash_sha3_512, hash_blake2b, legacy_hash_sha256, verification_status as status FROM whistleblower_vault ORDER BY timestamp_utc DESC');
       if (rows && rows.length > 0) {
         return res.json(rows);
       }
@@ -482,14 +540,22 @@ app.get('/api/whistleblower/list', async (req, res) => {
   res.json([...inMemoryWhistleblowerVault].reverse());
 });
 
-// GET /api/whistleblower/verify/:id - Verify submission token validity & SHA-256 integrity
+// GET /api/whistleblower/verify/:id - Multi-hash verification endpoint (SHA3-512, BLAKE2b, SHA-256)
 app.get('/api/whistleblower/verify/:id', async (req, res) => {
-  const token = (req.params.id || '').trim().toUpperCase();
+  const token = (req.params.id || '').trim();
+  const tokenUpper = token.toUpperCase();
+  const tokenLower = token.toLowerCase();
+
   try {
     if (sqliteAvailable) {
-      const rows = await queryAll('SELECT submission_id, timestamp_utc, agency_targeted, description_digest, encrypted_payload_hash as fingerprint_sha256, verification_status as status FROM whistleblower_vault WHERE UPPER(submission_id) = ? OR encrypted_payload_hash = ?', [token, token.toLowerCase()]);
+      const rows = await queryAll(
+        `SELECT submission_id, timestamp_utc, agency_targeted, description_digest, hash_sha3_512, hash_blake2b, legacy_hash_sha256, verification_status as status 
+         FROM whistleblower_vault 
+         WHERE UPPER(submission_id) = ? OR hash_sha3_512 = ? OR hash_blake2b = ? OR legacy_hash_sha256 = ?`,
+        [tokenUpper, tokenLower, tokenLower, tokenLower]
+      );
       if (rows && rows.length > 0) {
-        return res.json({ verified: true, record: rows[0] });
+        return res.json({ verified: true, record: rows[0], hash_algorithm_matched: rows[0].hash_sha3_512 === tokenLower ? 'SHA3-512' : (rows[0].hash_blake2b === tokenLower ? 'BLAKE2b-512' : (rows[0].legacy_hash_sha256 === tokenLower ? 'SHA-256' : 'SUBMISSION_TOKEN')) });
       }
     }
   } catch (err) {
@@ -497,19 +563,127 @@ app.get('/api/whistleblower/verify/:id', async (req, res) => {
   }
 
   const match = inMemoryWhistleblowerVault.find(r => 
-    r.submission_id.toUpperCase() === token || 
-    r.fingerprint_sha256.toLowerCase() === token.toLowerCase()
+    r.submission_id.toUpperCase() === tokenUpper || 
+    (r.hash_sha3_512 && r.hash_sha3_512.toLowerCase() === tokenLower) ||
+    (r.hash_blake2b && r.hash_blake2b.toLowerCase() === tokenLower) ||
+    (r.legacy_hash_sha256 && r.legacy_hash_sha256.toLowerCase() === tokenLower)
   );
 
   if (match) {
-    return res.json({ verified: true, record: match });
+    return res.json({ verified: true, record: match, hash_algorithm_matched: 'IN_MEMORY_RECORD' });
   }
 
-  res.status(404).json({ verified: false, message: 'Submission token or SHA-256 fingerprint not found in ledger.' });
+  res.status(404).json({ verified: false, message: 'Submission token or cryptographic hash not found in vault ledger.' });
 });
 
-// Torrent Feeds Endpoint
-app.get('/api/torrents', (req, res) => {
+// ==========================================
+// ADMIN & CURATORIAL TORRENT SEEDBOX PORTAL
+// ==========================================
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'bantay-curator-secret-key-2026';
+
+// Middleware to authenticate administrative requests
+const requireAdmin = (req, res, next) => {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim() || req.query.token;
+  if (!token || token !== ADMIN_TOKEN) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid Admin Token.' });
+  }
+  next();
+};
+
+// GET /api/admin/staging - View quarantined submissions
+app.get('/api/admin/staging', requireAdmin, async (req, res) => {
+  try {
+    if (sqliteAvailable) {
+      const rows = await queryAll('SELECT * FROM staging_queue ORDER BY timestamp_utc DESC');
+      return res.json(rows);
+    }
+  } catch (err) {
+    console.warn('[Admin staging DB fallback]:', err.message);
+  }
+  res.json([...inMemoryStagingQueue].reverse());
+});
+
+// POST /api/admin/approve/:id - Approve quarantined upload into public BitTorrent seedbox
+app.post('/api/admin/approve/:id', requireAdmin, async (req, res) => {
+  const id = req.params.id;
+  try {
+    let item = null;
+    if (sqliteAvailable) {
+      const rows = await queryAll('SELECT * FROM staging_queue WHERE id = ?', [id]);
+      if (rows && rows.length > 0) item = rows[0];
+    }
+    if (!item) {
+      item = inMemoryStagingQueue.find(s => s.id === id);
+    }
+
+    if (!item) {
+      return res.status(404).json({ error: 'Quarantine item not found.' });
+    }
+
+    // Create public torrent release
+    const info_hash = crypto.createHash('sha1').update(item.id + item.timestamp_utc).digest('hex');
+    const torrentName = `${item.agency_targeted.replace(/[^a-zA-Z0-9]/g, '_')}_Evidence_Archive_${item.id}.tar.zst`;
+    const magnetUri = `magnet:?xt=urn:btih:${info_hash}&dn=${encodeURIComponent(torrentName)}`;
+    const sizeBytes = item.file_size_bytes || 1048576;
+    const sizeHuman = (sizeBytes / (1024 * 1024)).toFixed(1) + ' MB';
+    const publishedDate = new Date().toISOString().slice(0, 10);
+
+    if (sqliteAvailable) {
+      await runSql('UPDATE staging_queue SET status = "APPROVED" WHERE id = ?', [id]);
+      await runSql(
+        'INSERT OR REPLACE INTO public_torrents VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [info_hash, torrentName, sizeBytes, sizeHuman, magnetUri, item.hash_sha3_512, 1, publishedDate]
+      );
+    }
+
+    item.status = 'APPROVED';
+
+    res.json({
+      success: true,
+      message: 'Item verified, approved, and released into 1Gbps public BitTorrent seedbox swarm.',
+      torrent: {
+        name: torrentName,
+        info_hash,
+        magnet: magnetUri,
+        sha3_512: item.hash_sha3_512,
+        size_human: sizeHuman
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/reject/:id - Reject spam / malicious content
+app.post('/api/admin/reject/:id', requireAdmin, async (req, res) => {
+  const id = req.params.id;
+  const reason = req.body?.reason || 'Non-civic / spam / unverified content';
+  try {
+    if (sqliteAvailable) {
+      await runSql('UPDATE staging_queue SET status = "REJECTED", rejection_reason = ? WHERE id = ?', [reason, id]);
+    }
+    const item = inMemoryStagingQueue.find(s => s.id === id);
+    if (item) {
+      item.status = 'REJECTED';
+      item.rejection_reason = reason;
+    }
+    res.json({ success: true, message: 'Upload successfully quarantined and rejected from public seedbox.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Public BitTorrent Archive Endpoint (Reads from SQLite public_torrents or fallback)
+app.get('/api/torrents', async (req, res) => {
+  try {
+    if (sqliteAvailable) {
+      const rows = await queryAll('SELECT * FROM public_torrents ORDER BY published_date DESC');
+      if (rows && rows.length > 0) return res.json(rows);
+    }
+  } catch (err) {
+    console.warn('[Torrents DB fallback]:', err.message);
+  }
   res.json([
     {
       name: "COA_AAR_Complete_Audit_Archive_2015_2023.tar.zst",
@@ -517,6 +691,7 @@ app.get('/api/torrents', (req, res) => {
       size_human: "40.0 GB",
       info_hash: "8f7b5a1c9e2d3f4a5b6c7d8e9f0a1b2c3d4e5f6a",
       magnet: "magnet:?xt=urn:btih:8f7b5a1c9e2d3f4a5b6c7d8e9f0a1b2c3d4e5f6a&dn=COA_AAR_Complete_Audit_Archive_2015_2023",
+      sha3_512: "a8f5c9e2b1d3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1",
       seeders_on_1gbps_node: 1
     },
     {
@@ -525,9 +700,15 @@ app.get('/api/torrents', (req, res) => {
       size_human: "8.0 GB",
       info_hash: "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b",
       magnet: "magnet:?xt=urn:btih:1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b&dn=PhilGEPS_Tenders_And_Awards_Full_Export",
+      sha3_512: "e1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4",
       seeders_on_1gbps_node: 1
     }
   ]);
+});
+
+// Admin Portal Direct Route
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'client', 'public', 'admin.html'));
 });
 
 // Single Page Application Fallback

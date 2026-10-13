@@ -783,6 +783,7 @@
         <nav class="top-nav">
           <button type="button" onclick="openWhistleblowerModal()">Tor Drop</button>
           <button type="button" onclick="openSeedboxModal()">P2P Seedbox</button>
+          <a href="/admin.html">Admin</a>
           <a href="/api/ocds/releases" target="_blank" rel="noopener">OCDS 1.1</a>
         </nav>
       </div>
@@ -1386,8 +1387,19 @@
         <div class="modal-field"><strong>Timestamp (UTC)</strong> ${escapeHtml(item.timestamp_utc || 'Recorded')}</div>
         <div class="modal-field"><strong>Target Agency / LGU</strong> ${escapeHtml(item.agency_targeted)}</div>
         <div class="modal-field"><strong>Public Summary Note / Digest</strong> ${escapeHtml(item.description_digest)}</div>
-        <div class="modal-field"><strong>SHA-256 Cryptographic Fingerprint</strong> <code style="word-break:break-all; font-size:11px;">${escapeHtml(item.fingerprint_sha256)}</code></div>
-        <div class="modal-field"><strong>Security Protocol</strong> Zero IP logging, GPG envelope emulation, memory encrypted before disk commit.</div>
+        <div class="modal-field">
+          <strong>SHA3-512 Quantum-Resistant Hash (Keccak Sponge)</strong>
+          <code style="word-break:break-all; font-size:11px;">${escapeHtml(item.hash_sha3_512 || 'N/A')}</code>
+        </div>
+        <div class="modal-field">
+          <strong>BLAKE2b High-Speed Tree Hash (64-Bit Optimized)</strong>
+          <code style="word-break:break-all; font-size:11px;">${escapeHtml(item.hash_blake2b || 'N/A')}</code>
+        </div>
+        <div class="modal-field">
+          <strong>Legacy SHA-256 Fingerprint</strong>
+          <code style="word-break:break-all; font-size:11px;">${escapeHtml(item.legacy_hash_sha256 || item.fingerprint_sha256 || 'N/A')}</code>
+        </div>
+        <div class="modal-field"><strong>Security Protocol</strong> Zero IP logging, SHA3-512 sponge integrity, memory encrypted before disk commit.</div>
       `;
 
       jsonBox.innerText = JSON.stringify(item, null, 2);
@@ -1402,7 +1414,7 @@
             <div class="badge-pill risk" style="margin-bottom: 12px;">ONION-ROUTED ENCRYPTED DEAD-DROP</div>
             <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Submit Confidential Disclosures</h3>
             <p style="font-size: 13px; color: var(--muted); margin-bottom: 20px;">
-              Submissions are cryptographically hashed in memory and committed to an isolated partition. No IP addresses, user agents, or network timestamps are stored.
+              Submissions are cryptographically hashed using <strong>SHA3-512 (Keccak)</strong> and <strong>BLAKE2b</strong> in memory and committed to an isolated partition. No IP addresses, user agents, or network timestamps are stored.
             </p>
 
             <form id="whistleForm" onsubmit="submitWhistleblower(event)">
@@ -1412,7 +1424,7 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label">Public Summary Context (Non-identifying summary shown in ledger)</label>
+                <label class="form-label">Public Summary Context (Non-identifying summary shown in public ledger)</label>
                 <input type="text" id="wNote" class="form-input" placeholder="e.g. Flood control kickbacks, unliquidated vouchers, ghost asphalt project">
               </div>
 
@@ -1421,7 +1433,7 @@
                 <textarea id="wBody" class="form-textarea" rows="6" placeholder="Paste unredacted voucher numbers, bank details, contractor ties, or whistleblowing disclosures..." required></textarea>
               </div>
 
-              <button type="submit" class="btn-submit">Encrypt &amp; Commit to Encrypted Vault</button>
+              <button type="submit" class="btn-submit">Encrypt &amp; Commit with SHA3-512 &amp; BLAKE2b</button>
             </form>
 
             <div id="whistleReceipt" style="display:none;" class="receipt-box"></div>
@@ -1438,7 +1450,7 @@
       const receipt = document.getElementById('whistleReceipt');
 
       receipt.style.display = 'block';
-      receipt.innerHTML = 'Hashing in-memory and committing cryptographically...';
+      receipt.innerHTML = 'Computing SHA3-512 sponge &amp; BLAKE2b signatures in-memory...';
 
       try {
         const res = await fetch('/api/whistleblower/submit', {
@@ -1454,8 +1466,15 @@
         receipt.innerHTML = `
           <strong style="color: #000;">SUCCESS: EVIDENCE COMMITTED TO ENCRYPTED VAULT</strong><br><br>
           Submission ID: <strong>${data.submission_id}</strong><br>
-          SHA-256 Fingerprint: <code style="word-break:break-all;">${data.fingerprint_sha256}</code><br>
           Status: <code>${data.status}</code><br><br>
+          <div style="margin-bottom:8px;">
+            <strong>SHA3-512 Quantum-Resistant Hash (Keccak Sponge):</strong><br>
+            <code style="word-break:break-all; font-size:11px;">${data.crypto_suite?.hash_sha3_512}</code>
+          </div>
+          <div style="margin-bottom:8px;">
+            <strong>BLAKE2b High-Speed Tree Hash:</strong><br>
+            <code style="word-break:break-all; font-size:11px;">${data.crypto_suite?.hash_blake2b}</code>
+          </div>
           <em>Zero IP logs recorded. Save your Submission ID to prove prior disclosure date.</em><br><br>
           <button type="button" class="btn-submit" style="padding:6px 14px; font-size:12px;" onclick="setFilter('VIEW SUBMISSIONS')">View in Vault Ledger →</button>
         `;
@@ -1471,19 +1490,19 @@
       container.innerHTML = `
         <div style="max-width: 680px;">
           <div style="border: 1px solid var(--border); padding: 28px; background: var(--card-bg); border-radius: 2px;">
-            <div class="badge-pill" style="margin-bottom: 12px;">CRYPTOGRAPHIC VERIFICATION</div>
-            <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Verify Submission Token or SHA-256 Hash</h3>
+            <div class="badge-pill" style="margin-bottom: 12px;">MULTI-ALGORITHM CRYPTOGRAPHIC VERIFICATION</div>
+            <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Verify Submission Token, SHA3-512, or BLAKE2b</h3>
             <p style="font-size: 13px; color: var(--muted); margin-bottom: 20px;">
-              Enter your secret <strong>Submission ID</strong> (e.g. <code>LEAK-82AEC4995D76</code>) or <strong>SHA-256 fingerprint</strong> to verify that your disclosure was recorded in the immutable public ledger without revealing its underlying evidence.
+              Enter your secret <strong>Submission ID</strong> (e.g. <code>LEAK-82AEC4995D76</code>) or any cryptographic hash (<strong>SHA3-512</strong>, <strong>BLAKE2b</strong>, or legacy <strong>SHA-256</strong>) to verify that your disclosure was recorded without revealing its underlying evidence.
             </p>
 
             <form onsubmit="verifyTokenSubmit(event)">
               <div class="form-group">
-                <label class="form-label">Submission ID or SHA-256 Fingerprint</label>
-                <input type="text" id="verifyTokenInput" class="form-input" placeholder="e.g. LEAK-82AEC4995D76 or 058a04ee53fa44..." required>
+                <label class="form-label">Submission ID or Hash (SHA3-512 / BLAKE2b / SHA-256)</label>
+                <input type="text" id="verifyTokenInput" class="form-input" placeholder="e.g. LEAK-BAF65CB0C7F2 or 4867d26d3d5322..." required>
               </div>
 
-              <button type="submit" class="btn-submit">Verify Integrity &amp; Timestamp</button>
+              <button type="submit" class="btn-submit">Verify Cryptographic Integrity</button>
             </form>
 
             <div id="verifyResult" style="display:none;" class="receipt-box"></div>
@@ -1511,11 +1530,19 @@
         resBox.innerHTML = `
           <strong style="color: #000;">VERIFIED: RECORD FOUND IN IMMUTABLE VAULT</strong><br><br>
           Submission ID: <strong>${r.submission_id}</strong><br>
-          Timestamp: <strong>${r.timestamp_utc}</strong><br>
+          Matched By: <code>${data.hash_algorithm_matched || 'CRYPTOGRAPHIC_MATCH'}</code><br>
+          Timestamp (UTC): <strong>${r.timestamp_utc}</strong><br>
           Agency Targeted: <strong>${escapeHtml(r.agency_targeted)}</strong><br>
-          Public Digest: <em>${escapeHtml(r.description_digest)}</em><br>
-          SHA-256 Fingerprint: <code style="word-break:break-all;">${r.fingerprint_sha256}</code><br>
-          Integrity Status: <code>${r.status}</code>
+          Public Digest: <em>${escapeHtml(r.description_digest)}</em><br><br>
+          <div style="margin-bottom:6px;">
+            <strong>SHA3-512 Hash:</strong><br>
+            <code style="word-break:break-all; font-size:11px;">${r.hash_sha3_512 || 'N/A'}</code>
+          </div>
+          <div style="margin-bottom:6px;">
+            <strong>BLAKE2b Hash:</strong><br>
+            <code style="word-break:break-all; font-size:11px;">${r.hash_blake2b || 'N/A'}</code>
+          </div>
+          Integrity Status: <code>${r.status || r.verification_status}</code>
         `;
       } catch (err) {
         resBox.innerHTML = `<span style="color:var(--accent);">Verification failed: ${err.message}</span>`;
@@ -1538,10 +1565,11 @@
               </div>
               <div class="thumb-main">
                 <div class="thumb-figure-lbl">PEER ARCHIVE</div>
-                <div class="thumb-figure-val" style="font-size:16px; word-break:break-all;">${t.name}</div>
+                <div class="thumb-figure-val" style="font-size:15px; word-break:break-all;">${escapeHtml(t.name)}</div>
               </div>
               <div class="thumb-flags" style="font-family:var(--font-mono); font-size:11px;">
-                Info-Hash: ${t.info_hash}
+                Info-Hash: ${t.info_hash}<br>
+                <span style="color:var(--muted); font-size:10px;">SHA3-512: ${(t.sha3_512 || '').slice(0, 24)}...</span>
               </div>
             </div>
             <div class="card-footer">
