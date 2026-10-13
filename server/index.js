@@ -807,6 +807,7 @@ async function syncSeedboxStorage() {
     if (!fs.existsSync(SEEDBOX_STORAGE_DIR)) return;
     const files = fs.readdirSync(SEEDBOX_STORAGE_DIR);
     for (const file of files) {
+      if (file.startsWith('.')) continue; // Skip .gitkeep and hidden files
       const fullPath = path.join(SEEDBOX_STORAGE_DIR, file);
       if (fs.statSync(fullPath).isFile()) {
         try {
@@ -886,9 +887,32 @@ app.get('/api/torrents/raw/:filename', (req, res) => {
 });
 
 // GET /api/torrents/file/:info_hash.torrent - Direct .torrent file download for qBittorrent
-app.get('/api/torrents/file/:info_hash.torrent', (req, res) => {
+app.get('/api/torrents/file/:info_hash.torrent', async (req, res) => {
   const hash = req.params.info_hash.toLowerCase();
-  const entry = activeTorrents.get(hash);
+  let entry = activeTorrents.get(hash);
+  if (!entry) {
+    for (const [k, v] of activeTorrents.entries()) {
+      if (k.toLowerCase() === hash) {
+        entry = v;
+        break;
+      }
+    }
+  }
+
+  // Fallback to SQLite public_torrents if not in active memory
+  if (!entry) {
+    try {
+      const rows = await queryAll('SELECT * FROM public_torrents WHERE LOWER(info_hash) = ?', [hash]);
+      if (rows && rows.length > 0) {
+        const filePath = path.join(SEEDBOX_STORAGE_DIR, rows[0].name);
+        if (fs.existsSync(filePath)) {
+          await seedFileOnSeedbox(filePath, rows[0].name, rows[0].sha3_512, rows[0].published_date);
+          entry = activeTorrents.get(hash);
+        }
+      }
+    } catch (e) {}
+  }
+
   if (!entry || !entry.torrentBuffer) {
     return res.status(404).json({ error: 'Torrent metadata not found in active seedbox memory.' });
   }
@@ -898,11 +922,32 @@ app.get('/api/torrents/file/:info_hash.torrent', (req, res) => {
 });
 
 // GET /api/torrents/download/:info_hash - Direct archive payload download
-app.get('/api/torrents/download/:info_hash', (req, res) => {
+app.get('/api/torrents/download/:info_hash', async (req, res) => {
   const hash = req.params.info_hash.toLowerCase();
-  const entry = activeTorrents.get(hash);
-  if (!entry || !entry.filePath) {
-    return res.status(404).json({ error: 'Archive payload not found.' });
+  let entry = activeTorrents.get(hash);
+  if (!entry) {
+    for (const [k, v] of activeTorrents.entries()) {
+      if (k.toLowerCase() === hash) {
+        entry = v;
+        break;
+      }
+    }
+  }
+
+  if (!entry) {
+    try {
+      const rows = await queryAll('SELECT * FROM public_torrents WHERE LOWER(info_hash) = ?', [hash]);
+      if (rows && rows.length > 0) {
+        const filePath = path.join(SEEDBOX_STORAGE_DIR, rows[0].name);
+        if (fs.existsSync(filePath)) {
+          return res.download(filePath, rows[0].name);
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (!entry || !entry.filePath || !fs.existsSync(entry.filePath)) {
+    return res.status(404).json({ error: 'Archive payload not found on disk.' });
   }
   res.download(entry.filePath, entry.fileName);
 });

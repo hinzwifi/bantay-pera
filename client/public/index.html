@@ -761,13 +761,26 @@
       background: rgba(0, 0, 0, 0.015);
     }
 
-    /* Empty state */
-    .empty-state {
-      padding: 48px 0;
-      text-align: center;
-      color: var(--muted);
-      font-size: 14px;
-      grid-column: 1 / -1;
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      background: #000000;
+      color: #ffffff;
+      font-size: 13px;
+      border-radius: 3px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.2s ease;
+      pointer-events: none;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
     }
   </style>
 </head>
@@ -1703,13 +1716,13 @@
                 </div>
               </div>
               <div class="card-footer" style="display:flex; gap:6px; padding:12px; border-top:1px solid var(--border); flex-wrap:wrap; background:rgba(0,0,0,0.015);">
-                <a href="${torrentUrl}" download style="flex:1; text-align:center; padding:6px 8px; font-size:11px; font-weight:600; text-decoration:none; background:#000; color:#fff; border-radius:2px;">
+                <button type="button" onclick="downloadArchiveFile('${t.info_hash}', '${escapeHtml(t.name)}.torrent', 'torrent')" style="flex:1; text-align:center; padding:6px 8px; font-size:11px; font-weight:600; background:#000; color:#fff; border:1px solid #000; cursor:pointer; border-radius:2px;">
                   .torrent
-                </a>
-                <a href="${downloadUrl}" download style="flex:1; text-align:center; padding:6px 8px; font-size:11px; font-weight:600; text-decoration:none; background:none; border:1px solid var(--border); color:var(--text); border-radius:2px;">
+                </button>
+                <button type="button" onclick="downloadArchiveFile('${t.info_hash}', '${escapeHtml(t.name)}', 'direct')" style="flex:1; text-align:center; padding:6px 8px; font-size:11px; font-weight:600; background:none; border:1px solid var(--border); color:var(--text); cursor:pointer; border-radius:2px;">
                   Direct File
-                </a>
-                <button type="button" onclick="copyMagnet('${t.magnet}')" style="flex:1; text-align:center; padding:6px 8px; font-size:11px; font-weight:600; background:none; border:1px solid var(--border); color:var(--text); cursor:pointer; border-radius:2px;">
+                </button>
+                <button type="button" data-magnet="${encodeURIComponent(t.magnet)}" onclick="copyMagnetLink(this)" style="flex:1; text-align:center; padding:6px 8px; font-size:11px; font-weight:600; background:none; border:1px solid var(--border); color:var(--text); cursor:pointer; border-radius:2px;">
                   Magnet
                 </button>
               </div>
@@ -1723,10 +1736,62 @@
       }
     }
 
-    function copyMagnet(magnet) {
-      navigator.clipboard.writeText(magnet).then(() => {
-        alert('Magnet link copied to clipboard!');
-      });
+    async function downloadArchiveFile(hash, filename, type) {
+      const url = type === 'torrent' 
+        ? `/api/torrents/file/${hash}.torrent`
+        : `/api/torrents/download/${hash}`;
+      
+      try {
+        showToast(`Preparing download for ${filename}...`);
+        const resp = await fetch(url);
+        if (!resp.ok) {
+          const errData = await resp.json().catch(() => ({}));
+          showToast(`Download failed: ${errData.error || resp.statusText || 'File not found'}`);
+          return;
+        }
+        const blob = await resp.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(blobUrl);
+        showToast(`Downloaded ${filename} successfully!`);
+      } catch (err) {
+        showToast(`Download failed: ${err.message}`);
+      }
+    }
+
+    function copyMagnetLink(el) {
+      const magnet = decodeURIComponent(el.getAttribute('data-magnet') || '');
+      if (!magnet) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(magnet).then(() => {
+          showToast('Magnet URI copied to clipboard! Paste directly into qBittorrent.');
+        }).catch(() => {
+          prompt('Copy Magnet URI for qBittorrent:', magnet);
+        });
+      } else {
+        prompt('Copy Magnet URI for qBittorrent:', magnet);
+      }
+    }
+
+    function showToast(msg) {
+      let toast = document.getElementById('appToast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'appToast';
+        toast.className = 'toast';
+        document.body.appendChild(toast);
+      }
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(window.__toastTimeout);
+      window.__toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3500);
     }
 
     // Interactive OCDS View
