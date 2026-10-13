@@ -1382,11 +1382,11 @@
       figValue.innerText = item.status || 'ENCRYPTED_AT_REST';
       
       body.innerHTML = `
-        <div class="modal-field"><strong>Submission ID Token</strong> <code>${item.submission_id}</code></div>
-        <div class="modal-field"><strong>Timestamp (UTC)</strong> ${item.timestamp_utc || 'Recorded'}</div>
-        <div class="modal-field"><strong>Target Agency / LGU</strong> ${item.agency_targeted}</div>
+        <div class="modal-field"><strong>Submission ID Token</strong> <code>${escapeHtml(item.submission_id)}</code></div>
+        <div class="modal-field"><strong>Timestamp (UTC)</strong> ${escapeHtml(item.timestamp_utc || 'Recorded')}</div>
+        <div class="modal-field"><strong>Target Agency / LGU</strong> ${escapeHtml(item.agency_targeted)}</div>
         <div class="modal-field"><strong>Public Summary Note / Digest</strong> ${escapeHtml(item.description_digest)}</div>
-        <div class="modal-field"><strong>SHA-256 Cryptographic Fingerprint</strong> <code style="word-break:break-all; font-size:11px;">${item.fingerprint_sha256}</code></div>
+        <div class="modal-field"><strong>SHA-256 Cryptographic Fingerprint</strong> <code style="word-break:break-all; font-size:11px;">${escapeHtml(item.fingerprint_sha256)}</code></div>
         <div class="modal-field"><strong>Security Protocol</strong> Zero IP logging, GPG envelope emulation, memory encrypted before disk commit.</div>
       `;
 

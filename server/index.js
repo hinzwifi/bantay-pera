@@ -16,11 +16,54 @@ process.on('unhandledRejection', (reason) => {
   console.error('[Bantay-Pera Unhandled Rejection caught safely]:', reason);
 });
 
+// Defensive HTTP Security Headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'geolocation=(), camera=(), microphone=()');
+  next();
+});
+
 app.use(cors());
-app.use(express.json({ limit: '1mb' }));
+// Strictly limit JSON body size to prevent memory-exhaustion / payload bombing
+app.use(express.json({ limit: '64kb' }));
+
+// In-memory sliding-window IP rate limiter
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 120; // 120 reqs/min for general API
+const MAX_SUBMISSIONS_PER_WINDOW = 6; // Max 6 whistleblower leaks/min
+
+const applyRateLimit = (maxRequests) => (req, res, next) => {
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const key = `${ip}:${req.path}`;
+  
+  let record = rateLimitMap.get(key);
+  if (!record || now - record.startTime > RATE_LIMIT_WINDOW_MS) {
+    record = { startTime: now, count: 1 };
+  } else {
+    record.count++;
+  }
+  rateLimitMap.set(key, record);
+
+  // Periodically prune stale keys
+  if (rateLimitMap.size > 2000) {
+    for (const [k, v] of rateLimitMap.entries()) {
+      if (now - v.startTime > RATE_LIMIT_WINDOW_MS) rateLimitMap.delete(k);
+    }
+  }
+
+  if (record.count > maxRequests) {
+    return res.status(429).json({ error: 'Too many requests. Please slow down.' });
+  }
+  next();
+};
 
 // Never cache API responses or service worker files
-app.use('/api', (req, res, next) => {
+app.use('/api', applyRateLimit(MAX_REQUESTS_PER_WINDOW), (req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
@@ -179,21 +222,28 @@ app.get('/api/stats', async (req, res) => {
 
 // 2. Universal Full-Text Search (SQLite FTS5 + In-memory fallback)
 app.get('/api/search', async (req, res) => {
-  const q = (req.query.q || '').trim();
-  if (!q) return res.json([]);
+  const rawQ = (req.query.q || '').trim();
+  if (!rawQ) return res.json([]);
+
+  // Restrict query length to prevent ReDoS / heavy wildcard index thrashing
+  const q = rawQ.slice(0, 60);
 
   if (sqliteAvailable) {
     try {
-      const sanitized = q.replace(/[^a-zA-Z0-9\s]/g, '') + '*';
-      const results = await queryAll(
-        `SELECT category, title, agency, snippet, identifier 
-         FROM search_index 
-         WHERE search_index MATCH ? 
-         ORDER BY rank LIMIT 25`,
-        [sanitized]
-      );
-      if (results && results.length > 0) {
-        return res.json(results);
+      // Extract alphanumeric words only and join with prefix query
+      const tokens = q.match(/[a-zA-Z0-9]+/g);
+      if (tokens && tokens.length > 0) {
+        const sanitized = tokens.map(t => `"${t}"*`).join(' ');
+        const results = await queryAll(
+          `SELECT category, title, agency, snippet, identifier 
+           FROM search_index 
+           WHERE search_index MATCH ? 
+           ORDER BY rank LIMIT 25`,
+          [sanitized]
+        );
+        if (results && results.length > 0) {
+          return res.json(results);
+        }
       }
     } catch (err) {
       console.warn('[FTS5 fallback]:', err.message);
@@ -367,7 +417,7 @@ app.get('/api/ocds/releases', (req, res) => {
 });
 
 // 10. Whistleblower In-Memory Encrypted Submission Dead-Drop
-app.post('/api/whistleblower/submit', async (req, res) => {
+app.post('/api/whistleblower/submit', applyRateLimit(MAX_SUBMISSIONS_PER_WINDOW), async (req, res) => {
   try {
     const { agency_targeted, message_body, public_note } = req.body;
     if (!agency_targeted || !message_body) {
@@ -377,7 +427,9 @@ app.post('/api/whistleblower/submit', async (req, res) => {
     const submission_id = 'LEAK-' + crypto.randomBytes(6).toString('hex').toUpperCase();
     const timestamp_utc = new Date().toISOString();
     const hash = crypto.createHash('sha256').update(message_body).digest('hex');
-    const description_digest = (public_note || agency_targeted) + ' (' + message_body.slice(0, 30) + '...)';
+    // Security: NEVER include raw or sliced message_body text in public digest
+    const sanitizedNote = (public_note || '').trim().slice(0, 100);
+    const description_digest = sanitizedNote || `Confidential disclosure submitted for ${agency_targeted.slice(0, 60)}`;
 
     const submissionRecord = {
       submission_id,
