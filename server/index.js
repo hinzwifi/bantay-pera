@@ -716,7 +716,16 @@ if (!fs.existsSync(SEEDBOX_STORAGE_DIR)) {
 }
 
 let webtorrentClient = null;
+let localTracker = null;
 const activeTorrents = new Map(); // infoHash -> { torrent, filePath, torrentBuffer, magnetURI, fileName }
+
+// Local BitTorrent HTTP Tracker endpoint for instant local swarm peer discovery
+app.all(['/announce', '/scrape'], (req, res) => {
+  if (localTracker) {
+    return localTracker.onHttpRequest(req, res);
+  }
+  res.status(503).send('BitTorrent Tracker initializing...');
+});
 
 const PUBLIC_TRACKERS = [
   'udp://tracker.opentrackr.org:1337/announce',
@@ -734,6 +743,10 @@ async function seedFileOnSeedbox(filePath, customName = null, sha3_512 = null, p
   }
 
   if (!webtorrentClient) {
+    const TrackerServer = (await import('bittorrent-tracker/server')).default;
+    localTracker = new TrackerServer({ http: false, udp: false, ws: false });
+    localTracker.on('warning', err => console.warn('[Local Tracker Warning]:', err.message));
+
     const WebTorrent = (await import('webtorrent')).default;
     webtorrentClient = new WebTorrent({ dht: true, tracker: true, lsd: true, utp: true });
   }
@@ -747,16 +760,40 @@ async function seedFileOnSeedbox(filePath, customName = null, sha3_512 = null, p
 
   // BEP 19 WebSeed URL allows qBittorrent / BitTorrent clients to download immediately via HTTP
   const webSeedUrl = `http://localhost:${PORT}/api/torrents/raw/${encodeURIComponent(fileName)}`;
+  const torrentFileUrl = `http://localhost:${PORT}/api/torrents/file/`;
+  const localAnnounce1 = `http://127.0.0.1:${PORT}/announce`;
+  const localAnnounce2 = `http://localhost:${PORT}/announce`;
+  const allAnnounce = [localAnnounce1, localAnnounce2, ...PUBLIC_TRACKERS];
 
   return new Promise((resolve, reject) => {
     webtorrentClient.seed(filePath, {
       name: fileName,
-      announce: PUBLIC_TRACKERS,
+      announce: allAnnounce,
       urlList: [webSeedUrl]
     }, async (torrent) => {
       let magnet = torrent.magnetURI;
+      const fullTorrentUrl = `${torrentFileUrl}${torrent.infoHash}.torrent`;
+
       if (!magnet.includes('&ws=')) {
         magnet += `&ws=${encodeURIComponent(webSeedUrl)}`;
+      }
+      // BEP 9 / BEP 53 HTTP metadata fallback: gives qBittorrent direct HTTP access to the .torrent metadata
+      if (!magnet.includes('&xs=')) {
+        magnet += `&xs=${encodeURIComponent(fullTorrentUrl)}`;
+      }
+      if (!magnet.includes('&as=')) {
+        magnet += `&as=${encodeURIComponent(fullTorrentUrl)}`;
+      }
+      // Ensure local tracker is prioritized in magnet
+      if (!magnet.includes(encodeURIComponent(localAnnounce1))) {
+        magnet += `&tr=${encodeURIComponent(localAnnounce1)}`;
+      }
+      if (!magnet.includes(encodeURIComponent(localAnnounce2))) {
+        magnet += `&tr=${encodeURIComponent(localAnnounce2)}`;
+      }
+      // BEP 40: Peer hint allows immediate TCP handshake to local seeder port without tracker waiting
+      if (webtorrentClient && webtorrentClient.torrentPort) {
+        magnet += `&x.pe=127.0.0.1:${webtorrentClient.torrentPort}`;
       }
 
       let hash_sha3 = sha3_512;
@@ -979,8 +1016,12 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', async () => {
   console.log(`Bantay-Pera Civic Engine running on http://0.0.0.0:${PORT}`);
-  // Initialize WebTorrent seedbox background engine
+  // Initialize WebTorrent seedbox background engine & Local BitTorrent Tracker
   try {
+    const TrackerServer = (await import('bittorrent-tracker/server')).default;
+    localTracker = new TrackerServer({ http: false, udp: false, ws: false });
+    localTracker.on('warning', err => console.warn('[Local Tracker Warning]:', err.message));
+
     const WebTorrent = (await import('webtorrent')).default;
     webtorrentClient = new WebTorrent({ dht: true, tracker: true, lsd: true, utp: true });
     await syncSeedboxStorage();
